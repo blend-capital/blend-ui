@@ -33,17 +33,22 @@ export async function getTokenBalance(
       timebounds: { minTime: 0, maxTime: 0 },
       networkPassphrase: network_passphrase,
     });
+    console.log('getting balance for token: ', token_id, 'for user: ', address.toString());
     tx_builder.addOperation(new Contract(token_id).call('balance', address.toScVal()));
-    let result = await stellar_rpc.simulateTransaction(tx_builder.build());
-    let xdr_string = result?.results?.at(0)?.xdr;
-    if (xdr_string == undefined) {
+    let result: any = await stellar_rpc.simulateTransaction(tx_builder.build());
+    let scval_result = result?.result?.retval;
+    console.log();
+    if (scval_result == undefined) {
       console.error('unable to fetch balance for token: ', token_id);
       return BigInt(0);
     }
-    let temp = scval_converter.scvalToBigInt(scval_converter.toScVal(xdr_string));
-    return temp;
+    let val = scval_converter.scvalToBigInt(
+      scval_converter.toScVal(scval_result.toXDR()?.toString('base64'))
+    );
+    console.log('balance for token: ', token_id, 'for user: ', address.toString(), 'is: ', val);
+    return val;
   } catch (e: any) {
-    console.error('unable to fetch balance for token: ', token_id);
+    console.error(e, 'unable to fetch balance for token: ', token_id);
     return BigInt(0);
   }
 }

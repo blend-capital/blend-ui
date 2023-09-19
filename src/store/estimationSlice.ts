@@ -168,7 +168,7 @@ export const createEstimationSlice: StateCreator<DataStore, [], [], EstimationSl
         }));
       }
     } catch (e) {
-      console.error('Unable to load pool data:', e);
+      console.error(`Unable to load pool data for ${pool_id}`);
     }
   },
 
@@ -267,6 +267,7 @@ function buildReserveEstimate(
 ): ReserveEstimates {
   let decimal_bstop_rate = pool.config.bstop_rate / 1e8; // TODO: Fix after pool redeploy updates bstop rate
   let est_res_data = reserve.estimateData(decimal_bstop_rate, lastUpdated);
+  console.log('data: ', decimal_bstop_rate);
   return {
     id: reserve.asset_id,
     decimals: reserve.config.decimals,

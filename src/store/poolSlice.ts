@@ -103,7 +103,7 @@ export const createPoolSlice: StateCreator<DataStore, [], [], PoolSlice> = (set,
         }));
       }
     } catch (e) {
-      console.error('unable to refresh data:', e);
+      console.error(`unable to refresh data for pool ${pool_id}`);
     }
   },
 
@@ -174,25 +174,53 @@ export const createPoolSlice: StateCreator<DataStore, [], [], PoolSlice> = (set,
 
 async function loadPool(stellar: Server, pool_id: string): Promise<Pool> {
   try {
-    let config_datakey = Pool.PoolDataKeyToXDR({ tag: 'PoolConfig' });
-    config_datakey = xdr.ScVal.fromXDR(config_datakey.toXDR());
-    let config_entry = await stellar.getContractData(pool_id, config_datakey);
-    let pool_config = Pool.PoolConfig.fromContractDataXDR(config_entry.xdr);
+    // const contractInstanceXDR = xdr.LedgerKey.contractData(
+    //   new xdr.LedgerKeyContractData({
+    //     contract: Address.fromString(pool_id).toScAddress(),
+    //     key: xdr.ScVal.scvLedgerKeyContractInstance(),
+    //     durability: xdr.ContractDataDurability.persistent(),
+    //     bodyType: xdr.ContractEntryBodyType.dataEntry(),
+    //   })
+    // );
+    // const entries_results = (await stellar.getLedgerEntries([contractInstanceXDR])).entries ?? [];
+    // let instance_entry = xdr.LedgerEntryData.fromXDR(entries_results[0].xdr, 'base64')
+    //   .contractData()
+    //   .body()
+    //   .data()
+    //   .val()
+    //   .instance()
+    //   .storage();
+    // if (instance_entry == undefined) {
+    //   throw Error('unable to load pool instance');
+    // }
+    // console.log(JSON.stringify(instance_entry));
+    let admin = 'GBL7YWXVK666DA74WNK2ZVLMYEWPOF22AVBXUGUMXP2Y64QVCSG5MSN3';
+    let name = 'Teapot';
+    let pool_config = new Pool.PoolConfig(
+      10000000,
+      'CBHUDJEU424QFNEHL3APGZBXRRPURAYR5FDMQXW6O6WUVUNK3R25LAJ3',
+      0
+    );
 
-    let admin_datakey = Pool.PoolDataKeyToXDR({ tag: 'Admin' });
-    admin_datakey = xdr.ScVal.fromXDR(admin_datakey.toXDR());
-    let admin_entry = await stellar.getContractData(pool_id, admin_datakey);
-    let admin = data_entry_converter.toString(admin_entry.xdr);
+    // let config_datakey = Pool.PoolDataKeyToXDR({ tag: 'PoolConfig' });
+    // config_datakey = xdr.ScVal.fromXDR(config_datakey.toXDR());
+    // let config_entry = await stellar.getContractData(pool_id, config_datakey);
+    // let pool_config = Pool.PoolConfig.fromContractDataXDR(config_entry.xdr);
+
+    // let admin_datakey = Pool.PoolDataKeyToXDR({ tag: 'Admin' });
+    // admin_datakey = xdr.ScVal.fromXDR(admin_datakey.toXDR());
+    // let admin_entry = await stellar.getContractData(pool_id, admin_datakey);
+    // let admin = data_entry_converter.toString(admin_entry.xdr);
 
     let res_list_datakey = Pool.PoolDataKeyToXDR({ tag: 'ResList' });
     res_list_datakey = xdr.ScVal.fromXDR(res_list_datakey.toXDR());
     let res_list_entry = await stellar.getContractData(pool_id, res_list_datakey);
     let res_list = data_entry_converter.toStringArray(res_list_entry.xdr, 'hex');
 
-    let name_datakey = Pool.PoolDataKeyToXDR({ tag: 'Name' });
-    name_datakey = xdr.ScVal.fromXDR(name_datakey.toXDR());
-    let name_entry = await stellar.getContractData(pool_id, name_datakey);
-    let name = data_entry_converter.toString(name_entry.xdr, 'utf-8');
+    // let name_datakey = Pool.PoolDataKeyToXDR({ tag: 'Name' });
+    // name_datakey = xdr.ScVal.fromXDR(name_datakey.toXDR());
+    // let name_entry = await stellar.getContractData(pool_id, name_datakey);
+    // let name = data_entry_converter.toString(name_entry.xdr, 'utf-8');
 
     return {
       id: pool_id,
@@ -202,7 +230,8 @@ async function loadPool(stellar: Server, pool_id: string): Promise<Pool> {
       reserves: res_list,
     };
   } catch (e) {
-    throw Error('Unable to load pool');
+    console.error(`unable to load pool: ${pool_id}`, e);
+    throw Error();
   }
 }
 
@@ -224,6 +253,11 @@ async function loadReservesForPool(
       data_datakey = xdr.ScVal.fromXDR(data_datakey.toXDR());
       let data_entry = await stellar.getContractData(pool.id, data_datakey);
       let reserve_data = Pool.ReserveData.fromContractDataXDR(data_entry.xdr);
+      // TODO: Find a better way to do this...
+      let symbol: string = TOKEN_META[asset_id as keyof typeof TOKEN_META]?.code ?? 'unknown';
+      console.log(asset_id);
+      console.log(symbol);
+      console.log(JSON.stringify(reserve_data, null, 2));
       // load token information
       let pool_balance = await getTokenBalance(
         stellar,
@@ -231,17 +265,11 @@ async function loadReservesForPool(
         asset_id,
         Address.fromString(pool.id)
       );
-
-      // TODO: Find a better way to do this...
-      let symbol: string = TOKEN_META[asset_id as keyof typeof TOKEN_META]?.code ?? 'unknown';
-
+      let reserve = new Pool.Reserve(asset_id, symbol, pool_balance, reserve_config, reserve_data);
       // add reserve object to map
-      reserve_map.set(
-        asset_id,
-        new Pool.Reserve(asset_id, symbol, pool_balance, reserve_config, reserve_data)
-      );
+      reserve_map.set(asset_id, reserve);
     } catch (e) {
-      console.error(`failed to update ${asset_id}: `, e);
+      console.error(`failed to load reserve ${asset_id}: `, e);
     }
   }
   return reserve_map;

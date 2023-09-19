@@ -112,6 +112,7 @@ export const WalletProvider = ({ children = null as any }) => {
         // simulate and rebuild tx
         let tx_no_footprint = txBuilder.build();
         let tx_footprint = await stellar.prepareTransaction(tx_no_footprint, passphrase);
+        console.log('prepped_tx: ', tx_footprint.toXDR());
         // fetch signature from wallet
         setTxStatus(TxStatus.SIGNING);
         let tx_signed = await signTransaction(tx_footprint.toXDR(), {
