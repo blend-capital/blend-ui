@@ -1,5 +1,5 @@
 import { data_entry_converter, Oracle, Pool } from 'blend-sdk';
-import { Address, Server, xdr } from 'soroban-client';
+import { Address, scValToNative, Server, xdr } from 'soroban-client';
 import { Durability } from 'soroban-client/lib/server';
 import { StateCreator } from 'zustand';
 import { getTokenBalance } from '../utils/stellar_rpc';
@@ -174,54 +174,85 @@ export const createPoolSlice: StateCreator<DataStore, [], [], PoolSlice> = (set,
 
 async function loadPool(stellar: Server, pool_id: string): Promise<Pool> {
   try {
-    // const contractInstanceXDR = xdr.LedgerKey.contractData(
-    //   new xdr.LedgerKeyContractData({
-    //     contract: Address.fromString(pool_id).toScAddress(),
-    //     key: xdr.ScVal.scvLedgerKeyContractInstance(),
-    //     durability: xdr.ContractDataDurability.persistent(),
-    //     bodyType: xdr.ContractEntryBodyType.dataEntry(),
-    //   })
-    // );
-    // const entries_results = (await stellar.getLedgerEntries([contractInstanceXDR])).entries ?? [];
-    // let instance_entry = xdr.LedgerEntryData.fromXDR(entries_results[0].xdr, 'base64')
-    //   .contractData()
-    //   .body()
-    //   .data()
-    //   .val()
-    //   .instance()
-    //   .storage();
-    // if (instance_entry == undefined) {
-    //   throw Error('unable to load pool instance');
-    // }
-    // console.log(JSON.stringify(instance_entry));
-    let admin = 'GBL7YWXVK666DA74WNK2ZVLMYEWPOF22AVBXUGUMXP2Y64QVCSG5MSN3';
-    let name = 'Teapot';
-    let pool_config = new Pool.PoolConfig(
-      10000000,
-      'CBHUDJEU424QFNEHL3APGZBXRRPURAYR5FDMQXW6O6WUVUNK3R25LAJ3',
-      0
+    const contractInstanceXDR = xdr.LedgerKey.contractData(
+      new xdr.LedgerKeyContractData({
+        contract: Address.fromString(pool_id).toScAddress(),
+        key: xdr.ScVal.scvLedgerKeyContractInstance(),
+        durability: xdr.ContractDataDurability.persistent(),
+      })
     );
+    let admin: string | undefined;
+    let name: string | undefined;
+    let BLNDTkn: string | undefined;
+    let USDCTkn: string | undefined;
+    let Backstop: string | undefined;
+    let pool_config: Pool.PoolConfig | undefined;
 
-    // let config_datakey = Pool.PoolDataKeyToXDR({ tag: 'PoolConfig' });
-    // config_datakey = xdr.ScVal.fromXDR(config_datakey.toXDR());
-    // let config_entry = await stellar.getContractData(pool_id, config_datakey);
-    // let pool_config = Pool.PoolConfig.fromContractDataXDR(config_entry.xdr);
-
-    // let admin_datakey = Pool.PoolDataKeyToXDR({ tag: 'Admin' });
-    // admin_datakey = xdr.ScVal.fromXDR(admin_datakey.toXDR());
-    // let admin_entry = await stellar.getContractData(pool_id, admin_datakey);
-    // let admin = data_entry_converter.toString(admin_entry.xdr);
+    const entries_results = (await stellar.getLedgerEntries(contractInstanceXDR)).entries ?? [];
+    let instance_entry = xdr.LedgerEntryData.fromXDR(entries_results[0].xdr, 'base64')
+      .contractData()
+      .val()
+      .instance()
+      .storage()
+      ?.map((entry) => {
+        switch (entry.key().sym().toString()) {
+          case 'Admin':
+            admin = Address.fromScVal(entry.val()).toString();
+            return;
+          case 'BLNDTkn':
+            BLNDTkn = Address.fromScVal(entry.val()).toString();
+            return;
+          case 'Backstop':
+            Backstop = Address.fromScVal(entry.val()).toString();
+            return;
+          case 'USDCTkn':
+            USDCTkn = Address.fromScVal(entry.val()).toString();
+            return;
+          case 'PoolConfig':
+            let bstop_rate: number | undefined;
+            let oracle: string | undefined;
+            let status: number | undefined;
+            entry
+              .val()
+              .map()
+              ?.map((config_entry) => {
+                console.log(config_entry.key());
+                switch (config_entry.key().sym().toString()) {
+                  case 'bstop_rate':
+                    bstop_rate = Number(config_entry.val().u64().toString());
+                    return;
+                  case 'oracle':
+                    oracle = Address.fromScVal(config_entry.val()).toString();
+                    return;
+                  case 'status':
+                    status = scValToNative(config_entry.val());
+                    return;
+                }
+              });
+            if (bstop_rate == undefined || oracle == undefined || status == undefined) {
+              throw new Error();
+            }
+            pool_config = new Pool.PoolConfig(bstop_rate, oracle, status);
+            return;
+          // pool_config = Pool.PoolConfig.fromContractDataXDR(entry.val().toXDR().toString());
+          case 'Name':
+            name = entry.val().sym().toString();
+            return;
+        }
+      });
+    console.log(BLNDTkn, Backstop, USDCTkn);
+    if (instance_entry == undefined) {
+      throw Error('unable to load pool instance');
+    }
 
     let res_list_datakey = Pool.PoolDataKeyToXDR({ tag: 'ResList' });
     res_list_datakey = xdr.ScVal.fromXDR(res_list_datakey.toXDR());
     let res_list_entry = await stellar.getContractData(pool_id, res_list_datakey);
     let res_list = data_entry_converter.toStringArray(res_list_entry.xdr, 'hex');
 
-    // let name_datakey = Pool.PoolDataKeyToXDR({ tag: 'Name' });
-    // name_datakey = xdr.ScVal.fromXDR(name_datakey.toXDR());
-    // let name_entry = await stellar.getContractData(pool_id, name_datakey);
-    // let name = data_entry_converter.toString(name_entry.xdr, 'utf-8');
-
+    if (name == undefined || admin == undefined || pool_config == undefined) {
+      throw Error();
+    }
     return {
       id: pool_id,
       name,
