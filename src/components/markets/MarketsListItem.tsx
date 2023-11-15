@@ -6,10 +6,16 @@ import { TokenHeader } from '../common/TokenHeader';
 import { StackedApr } from './StackedApr';
 
 export interface MarketsListItemProps extends BoxProps {
+  poolId: string;
   reserveData: ReserveEstimates;
 }
 
-export const MarketsListItem: React.FC<MarketsListItemProps> = ({ reserveData, sx, ...props }) => {
+export const MarketsListItem: React.FC<MarketsListItemProps> = ({
+  poolId,
+  reserveData,
+  sx,
+  ...props
+}) => {
   const theme = useTheme();
   const { viewType } = useSettings();
 
@@ -41,7 +47,12 @@ export const MarketsListItem: React.FC<MarketsListItemProps> = ({ reserveData, s
           type: 'alt',
         }}
       >
-        <TokenHeader id={reserveData.id} sx={{ width: tableWidth, marginRight: '12px' }} />
+        <TokenHeader
+          poolId={poolId}
+          assetId={reserveData.id}
+          displayLink={true}
+          sx={{ width: tableWidth, marginRight: '12px' }}
+        />
         <Box
           sx={{
             width: tableWidth,

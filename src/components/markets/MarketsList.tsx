@@ -86,7 +86,7 @@ export const MarketsList: React.FC<PoolComponentProps> = ({ poolId }) => {
       </Box>
       {poolReserveEstimates ? (
         poolReserveEstimates.map((reserve) => (
-          <MarketsListItem key={reserve.id} reserveData={reserve} />
+          <MarketsListItem key={reserve.id} poolId={poolId} reserveData={reserve} />
         ))
       ) : (
         <></>

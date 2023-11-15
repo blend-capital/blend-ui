@@ -1,6 +1,6 @@
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { Box, Typography, useTheme } from '@mui/material';
-import { useSettings, ViewType } from '../../contexts';
+import { ViewType, useSettings } from '../../contexts';
 import { ReserveEstimates, UserReserveEstimates } from '../../store/estimationSlice';
 import * as formatter from '../../utils/formatter';
 import { CustomButton } from '../common/CustomButton';
@@ -51,7 +51,12 @@ export const LendPositionCard: React.FC<LendPositionCardProps> = ({
             },
           }}
         >
-          <TokenHeader id={reserveData.id} sx={{ width: tableWidth }} />
+          <TokenHeader
+            poolId={poolId}
+            assetId={reserveData.id}
+            displayLink={false}
+            sx={{ width: tableWidth }}
+          />
           <Box
             sx={{
               width: tableWidth,
