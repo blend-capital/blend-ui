@@ -33,6 +33,8 @@ export const BorrowAnvil: React.FC<ReserveComponentProps> = ({ poolId, assetId }
 
   const [toBorrow, setToBorrow] = useState<string>('');
   const [simResult, setSimResult] = useState<ContractResponse<Positions>>();
+  const [validDecimals, setValidDecimals] = useState<boolean>(true);
+
   const decimals = reserve?.config.decimals ?? 7;
   const symbol = reserve?.tokenMetadata?.symbol ?? '';
 
@@ -40,9 +42,11 @@ export const BorrowAnvil: React.FC<ReserveComponentProps> = ({ poolId, assetId }
     setToBorrow('0');
   }
   useDebouncedState(toBorrow, 500, async () => {
-    let sim = await handleSubmitTransaction(true);
-    if (sim) {
-      setSimResult(sim);
+    if (validDecimals) {
+      let sim = await handleSubmitTransaction(true);
+      if (sim) {
+        setSimResult(sim);
+      }
     }
   });
 
@@ -65,6 +69,7 @@ export const BorrowAnvil: React.FC<ReserveComponentProps> = ({ poolId, assetId }
       errorProps.reason = 'Please enter an amount to borrow.';
       errorProps.disabledType = 'info';
     } else if (toBorrow.split('.')[1]?.length > decimals) {
+      setValidDecimals(false);
       errorProps.isSubmitDisabled = true;
       errorProps.isMaxDisabled = false;
       errorProps.reason = `You cannot supply more than ${decimals} decimal places.`;

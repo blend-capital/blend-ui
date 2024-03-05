@@ -36,15 +36,18 @@ export const RepayAnvil: React.FC<ReserveComponentProps> = ({ poolId, assetId })
 
   const [toRepay, setToRepay] = useState<string>('');
   const [simResult, setSimResult] = useState<ContractResponse<Positions> | undefined>();
+  const [validDecimals, setValidDecimals] = useState<boolean>(true);
 
   const decimals = reserve?.config.decimals ?? 7;
   const scalar = 10 ** decimals;
   const symbol = reserve?.tokenMetadata?.symbol ?? '';
 
   useDebouncedState(toRepay, 500, async () => {
-    let sim = await handleSubmitTransaction(true);
-    if (sim) {
-      setSimResult(sim);
+    if (validDecimals) {
+      let sim = await handleSubmitTransaction(true);
+      if (sim) {
+        setSimResult(sim);
+      }
     }
   });
   let newPositionEstimate =
@@ -79,6 +82,7 @@ export const RepayAnvil: React.FC<ReserveComponentProps> = ({ poolId, assetId })
       errorProps.reason = 'Please enter an amount to repay.';
       errorProps.disabledType = 'info';
     } else if (toRepay.split('.')[1]?.length > decimals) {
+      setValidDecimals(false);
       errorProps.isSubmitDisabled = true;
       errorProps.isMaxDisabled = false;
       errorProps.reason = `You cannot supply more than ${decimals} decimal places.`;

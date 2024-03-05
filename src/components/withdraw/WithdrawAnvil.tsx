@@ -34,11 +34,14 @@ export const WithdrawAnvil: React.FC<ReserveComponentProps> = ({ poolId, assetId
   const [toWithdrawSubmit, setToWithdrawSubmit] = useState<string | undefined>(undefined);
   const [toWithdraw, setToWithdraw] = useState<string>('');
   const [simResult, setSimResult] = useState<ContractResponse<Positions>>();
+  const [validDecimals, setValidDecimals] = useState<boolean>(true);
 
   useDebouncedState(toWithdrawSubmit, 500, async () => {
-    let sim = await handleSubmitTransaction(true);
-    if (sim) {
-      setSimResult(sim);
+    if (validDecimals) {
+      let sim = await handleSubmitTransaction(true);
+      if (sim) {
+        setSimResult(sim);
+      }
     }
   });
 
@@ -67,6 +70,7 @@ export const WithdrawAnvil: React.FC<ReserveComponentProps> = ({ poolId, assetId
       errorProps.reason = 'Please enter an amount to withdraw.';
       errorProps.disabledType = 'info';
     } else if (toWithdraw.split('.')[1]?.length > decimals) {
+      setValidDecimals(false);
       errorProps.isSubmitDisabled = true;
       errorProps.isMaxDisabled = false;
       errorProps.reason = `You cannot supply more than ${decimals} decimal places.`;

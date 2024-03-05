@@ -36,14 +36,17 @@ export const LendAnvil: React.FC<ReserveComponentProps> = ({ poolId, assetId }) 
 
   const [toLend, setToLend] = useState<string>('');
   const [simResult, setSimResult] = useState<ContractResponse<Positions>>();
+  const [validDecimals, setValidDecimals] = useState<boolean>(true);
   const decimals = reserve?.config.decimals ?? 7;
   const scalar = 10 ** decimals;
   const symbol = reserve?.tokenMetadata?.symbol ?? '';
 
   useDebouncedState(toLend, 500, async () => {
-    let sim = await handleSubmitTransaction(true);
-    if (sim) {
-      setSimResult(sim);
+    if (validDecimals) {
+      let sim = await handleSubmitTransaction(true);
+      if (sim) {
+        setSimResult(sim);
+      }
     }
   });
   let newPositionEstimate =
@@ -72,6 +75,7 @@ export const LendAnvil: React.FC<ReserveComponentProps> = ({ poolId, assetId }) 
       errorProps.reason = 'Please enter an amount to supply.';
       errorProps.disabledType = 'info';
     } else if (toLend.split('.')[1]?.length > decimals) {
+      setValidDecimals(false);
       errorProps.isSubmitDisabled = true;
       errorProps.isMaxDisabled = false;
       errorProps.reason = `You cannot supply more than ${decimals} decimal places.`;
