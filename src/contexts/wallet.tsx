@@ -20,7 +20,6 @@ import {
 import React, { useContext, useEffect, useState } from 'react';
 import {
   BASE_FEE,
-  Operation,
   SorobanRpc,
   Transaction,
   TransactionBuilder,
@@ -215,28 +214,28 @@ export const WalletProvider = ({ children = null as any }) => {
     }
   }
 
-  async function restore(
-    simulation: SorobanRpc.Api.SimulateTransactionRestoreResponse,
-    transaction: Transaction
-  ): Promise<ContractResponse<void>> {
-    let account = await rpc.getAccount(walletAddress);
-    // if (SorobanRpc.Api.isSimulationRestore(simulation)) {
-    setTxStatus(TxStatus.BUILDING);
-    let fee = parseInt(simulation.restorePreamble.minResourceFee) + parseInt(transaction.fee);
-    let restore_tx = new TransactionBuilder(account, { fee: fee.toString() })
-      .setNetworkPassphrase(network.passphrase)
-      .setSorobanData(simulation.restorePreamble.transactionData.build())
-      .addOperation(Operation.restoreFootprint({}))
-      .build();
-    let signed_restore_tx = new Transaction(await sign(restore_tx.toXDR()), network.passphrase);
-    setTxHash(signed_restore_tx.hash().toString('hex'));
-    let restore_tx_resp = await sendTransaction(signed_restore_tx, (result: string) => undefined);
-    if (restore_tx_resp) {
-      return restore_tx_resp;
-    } else {
-      throw new Error('Restore transaction failed');
-    }
-  }
+  // async function restore(
+  //   simulation: SorobanRpc.Api.SimulateTransactionRestoreResponse,
+  //   transaction: Transaction
+  // ): Promise<ContractResponse<void>> {
+  //   let account = await rpc.getAccount(walletAddress);
+  //   // if (SorobanRpc.Api.isSimulationRestore(simulation)) {
+  //   setTxStatus(TxStatus.BUILDING);
+  //   let fee = parseInt(simulation.restorePreamble.minResourceFee) + parseInt(transaction.fee);
+  //   let restore_tx = new TransactionBuilder(account, { fee: fee.toString() })
+  //     .setNetworkPassphrase(network.passphrase)
+  //     .setSorobanData(simulation.restorePreamble.transactionData.build())
+  //     .addOperation(Operation.restoreFootprint({}))
+  //     .build();
+  //   let signed_restore_tx = new Transaction(await sign(restore_tx.toXDR()), network.passphrase);
+  //   setTxHash(signed_restore_tx.hash().toString('hex'));
+  //   let restore_tx_resp = await sendTransaction(signed_restore_tx, (result: string) => undefined);
+  //   if (restore_tx_resp) {
+  //     return restore_tx_resp;
+  //   } else {
+  //     throw new Error('Restore transaction failed');
+  //   }
+  // }
 
   async function sendTransaction<T>(
     transaction: Transaction,
@@ -304,19 +303,10 @@ export const WalletProvider = ({ children = null as any }) => {
         return sim_response;
       }
       if (sim_response.result.isErr()) {
-        if (SorobanRpc.Api.isSimulationRestore(simulation)) {
-          let response = await restore(simulation, transaction);
-          if (response.result.isErr()) {
-            return;
-          }
-          account.incrementSequenceNumber();
-          transaction = tx_builder.build();
-        } else {
-          // TODO: implement error message from type
-          setFailureMessage(sim_response.result.unwrapErr().message);
-          setTxStatus(TxStatus.FAIL);
-          return;
-        }
+        // TODO: implement error message from type
+        setFailureMessage(sim_response.result.unwrapErr().message);
+        setTxStatus(TxStatus.FAIL);
+        return;
       }
 
       setFailureMessage(undefined);
