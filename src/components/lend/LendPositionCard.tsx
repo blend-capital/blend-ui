@@ -26,8 +26,8 @@ export const LendPositionCard: React.FC<LendPositionCardProps> = ({
   const theme = useTheme();
   const { viewType } = useSettings();
 
-  const userSupplyEst = userPoolData.estimates.supply.get(reserve.assetId);
-  const userCollatEst = userPoolData.estimates.collateral.get(reserve.assetId);
+  const userSupplyEst = userPoolData.positionEstimates.supply.get(reserve.assetId);
+  const userCollatEst = userPoolData.positionEstimates.collateral.get(reserve.assetId);
   const totalSupplyEst = userSupplyEst ?? 0 + (userCollatEst ?? 0);
 
   const tableNum = viewType === ViewType.REGULAR ? 5 : 4;

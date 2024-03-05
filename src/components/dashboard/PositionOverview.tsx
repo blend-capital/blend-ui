@@ -24,16 +24,16 @@ export const PositionOverview: React.FC<PoolComponentProps> = ({ poolId }) => {
   const loadBlendData = useStore((state) => state.loadBlendData);
 
   const borrow_capacity = userPoolData
-    ? userPoolData.estimates.totalEffectiveCollateral -
-      userPoolData.estimates.totalEffectiveLiabilities
+    ? userPoolData.positionEstimates.totalEffectiveCollateral -
+      userPoolData.positionEstimates.totalEffectiveLiabilities
     : 0;
   const borrow_capacity_fill = userPoolData
-    ? (userPoolData.estimates.totalEffectiveLiabilities /
-        userPoolData.estimates.totalEffectiveCollateral) *
+    ? (userPoolData.positionEstimates.totalEffectiveLiabilities /
+        userPoolData.positionEstimates.totalEffectiveCollateral) *
       100
     : 100;
-  const net_apy = Number.isFinite(userPoolData?.estimates?.netApy)
-    ? userPoolData?.estimates?.netApy
+  const net_apy = Number.isFinite(userPoolData?.positionEstimates?.netApy)
+    ? userPoolData?.positionEstimates?.netApy
     : 0;
 
   const handleSubmitTransaction = async () => {
@@ -125,7 +125,7 @@ export const PositionOverview: React.FC<PoolComponentProps> = ({ poolId }) => {
                 <StackedText
                   title="Claim Pool Emissions"
                   titleColor="inherit"
-                  text={`${toBalance(userPoolData?.estimates?.totalEmissions ?? 0)} BLND`}
+                  text={`${toBalance(userPoolData?.emissionEstimates?.totalEmissions ?? 0)} BLND`}
                   textColor="inherit"
                   type="large"
                 />
@@ -208,7 +208,7 @@ export const PositionOverview: React.FC<PoolComponentProps> = ({ poolId }) => {
                 <StackedText
                   title="Claim Pool Emissions"
                   titleColor="inherit"
-                  text={`${toBalance(userPoolData?.estimates?.totalEmissions ?? 0)} BLND`}
+                  text={`${toBalance(userPoolData?.emissionEstimates?.totalEmissions ?? 0)} BLND`}
                   textColor="inherit"
                   type="large"
                   onClick={handleSubmitTransaction}

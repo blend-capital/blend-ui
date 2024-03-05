@@ -12,8 +12,8 @@ export const BorrowCapRing: React.FC<BorrowCapRingProps> = ({ poolId, ...props }
   const poolUserEstimate = useStore((state) => state.userPoolData.get(poolId));
 
   const borrow_capacity_fill = poolUserEstimate
-    ? (poolUserEstimate.estimates.totalEffectiveLiabilities /
-        poolUserEstimate.estimates.totalEffectiveLiabilities) *
+    ? (poolUserEstimate.positionEstimates.totalEffectiveLiabilities /
+        poolUserEstimate.positionEstimates.totalEffectiveLiabilities) *
       100
     : 100;
   return (

@@ -1,6 +1,7 @@
 import {
   BackstopClaimArgs,
   BackstopContract,
+  ContractErrorType,
   ContractResponse,
   PoolBackstopActionArgs,
   PoolClaimArgs,
@@ -270,8 +271,8 @@ export const WalletProvider = ({ children = null as any }) => {
       console.log('Successfully submitted transaction: ', tx_resp.hash);
       setTxStatus(TxStatus.SUCCESS);
     } else {
-      console.log('Failed submitted transaction: ', tx_resp.hash);
-      setFailureMessage(tx_resp.result.unwrapErr().message);
+      console.log('Failed Transaction Hash: ', tx_resp.hash);
+      setFailureMessage(ContractErrorType[tx_resp.result.unwrapErr().type]);
       setTxStatus(TxStatus.FAIL);
     }
     return tx_resp;

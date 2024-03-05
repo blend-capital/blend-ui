@@ -26,7 +26,7 @@ export const BorrowPositionCard: React.FC<BorrowPositionCardProps> = ({
   const theme = useTheme();
   const { viewType } = useSettings();
 
-  const userBorrowEst = userPoolData.estimates.liabilities.get(reserve.assetId) ?? 0;
+  const userBorrowEst = userPoolData.positionEstimates.liabilities.get(reserve.assetId) ?? 0;
 
   const tableNum = viewType === ViewType.REGULAR ? 5 : 4;
   const tableWidth = `${(100 / tableNum).toFixed(2)}%`;

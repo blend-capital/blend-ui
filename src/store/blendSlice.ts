@@ -51,8 +51,13 @@ export const createBlendSlice: StateCreator<DataStore, [], [], BlendSlice> = (se
       // all pools in the reward zone + the request pools are loaded on the backstop
       let pools = new Map<string, Pool>();
       for (let pool of Array.from(backstop.pools.keys())) {
-        let pool_data = await Pool.load(network, pool, latest_ledger_close);
-        pools.set(pool, pool_data);
+        try {
+          let pool_data = await Pool.load(network, pool, latest_ledger_close);
+          pools.set(pool, pool_data);
+        } catch (e) {
+          console.error('Unable to load pool data for pool ' + pool);
+          console.error(e);
+        }
       }
 
       set({

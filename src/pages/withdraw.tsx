@@ -51,7 +51,7 @@ const Withdraw: NextPage = () => {
               </Typography>
               <Typography variant="h4" sx={{ color: theme.palette.lend.main }}>
                 {toBalance(
-                  userPoolData?.estimates?.collateral?.get(safeAssetId) ?? 0,
+                  userPoolData?.positionEstimates?.collateral?.get(safeAssetId) ?? 0,
                   reserve?.config.decimals
                 )}
               </Typography>

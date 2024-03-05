@@ -52,7 +52,7 @@ const Repay: NextPage = () => {
               </Typography>
               <Typography variant="h4" sx={{ color: theme.palette.borrow.main }}>
                 {toBalance(
-                  userPoolData?.estimates?.liabilities?.get(safeAssetId) ?? 0,
+                  userPoolData?.positionEstimates?.liabilities?.get(safeAssetId) ?? 0,
                   reserve?.config.decimals
                 )}
               </Typography>

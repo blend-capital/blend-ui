@@ -12,7 +12,7 @@ export const BorrowPositions: React.FC<PoolComponentProps> = ({ poolId }) => {
 
   const userPoolData = useStore((state) => state.userPoolData.get(poolId));
 
-  if (!userPoolData || userPoolData.estimates.totalBorrowed == 0) {
+  if (!userPoolData || userPoolData.positionEstimates.totalBorrowed == 0) {
     return <></>;
   }
 
@@ -27,7 +27,7 @@ export const BorrowPositions: React.FC<PoolComponentProps> = ({ poolId }) => {
             <StackedText
               title="Balance"
               titleColor={theme.palette.text.primary}
-              text={`$${toBalance(userPoolData.estimates.totalBorrowed)}`}
+              text={`$${toBalance(userPoolData.positionEstimates.totalBorrowed)}`}
               textColor={theme.palette.borrow.main}
               sx={{ width: '100%', padding: '6px' }}
             ></StackedText>
@@ -36,7 +36,7 @@ export const BorrowPositions: React.FC<PoolComponentProps> = ({ poolId }) => {
             <StackedText
               title="APY"
               titleColor={theme.palette.text.primary}
-              text={toPercentage(userPoolData.estimates.borrowApy)}
+              text={toPercentage(userPoolData.positionEstimates.borrowApy)}
               textColor={theme.palette.borrow.main}
               sx={{ width: '100%', padding: '6px' }}
             ></StackedText>
