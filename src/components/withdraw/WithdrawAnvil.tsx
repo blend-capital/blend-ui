@@ -1,7 +1,15 @@
-import { RequestType, SubmitArgs } from '@blend-capital/blend-sdk';
+import {
+  ContractErrorType,
+  ContractResponse,
+  PositionEstimates,
+  Positions,
+  RequestType,
+  SubmitArgs,
+} from '@blend-capital/blend-sdk';
 import { Box, Typography, useTheme } from '@mui/material';
 import { useMemo, useState } from 'react';
 import { TxStatus, useWallet } from '../../contexts/wallet';
+import { useDebouncedState } from '../../hooks/debounce';
 import { useStore } from '../../store/store';
 import { toBalance, toPercentage } from '../../utils/formatter';
 import { scaleInputToBigInt } from '../../utils/scval';
@@ -25,35 +33,22 @@ export const WithdrawAnvil: React.FC<ReserveComponentProps> = ({ poolId, assetId
 
   const [toWithdrawSubmit, setToWithdrawSubmit] = useState<string | undefined>(undefined);
   const [toWithdraw, setToWithdraw] = useState<string>('');
+  const [simResult, setSimResult] = useState<ContractResponse<Positions>>();
+
+  useDebouncedState(toWithdrawSubmit, 500, async () => {
+    let sim = await handleSubmitTransaction(true);
+    if (sim) {
+      setSimResult(sim);
+    }
+  });
+
+  let newPositionEstimate =
+    poolData && simResult && simResult.result.isOk()
+      ? PositionEstimates.build(poolData, simResult.result.unwrap())
+      : undefined;
 
   const decimals = reserve?.config.decimals ?? 7;
   const symbol = reserve?.tokenMetadata?.symbol ?? '';
-  const poolTokens = reserve?.poolBalance ?? BigInt(0);
-
-  // calculate current wallet state
-  const curSupplied = userPoolData?.estimates?.collateral?.get(assetId) ?? 0;
-  const oldBorrowCap = userPoolData
-    ? userPoolData.estimates.totalEffectiveCollateral -
-      userPoolData.estimates.totalEffectiveLiabilities
-    : undefined;
-  const oldBorrowLimit = userPoolData
-    ? userPoolData.estimates.totalEffectiveLiabilities /
-      userPoolData.estimates.totalEffectiveCollateral
-    : undefined;
-
-  // calculate new wallet state
-  let newEffectiveCollateral = 0;
-  if (userPoolData && reserve && toWithdraw) {
-    let num_withdraw = Number(toWithdraw);
-    let withdraw_base = num_withdraw * assetPrice * reserve.getCollateralFactor();
-    newEffectiveCollateral = userPoolData.estimates.totalEffectiveCollateral - withdraw_base;
-  }
-  const borrowCap = userPoolData
-    ? newEffectiveCollateral - userPoolData.estimates.totalEffectiveLiabilities
-    : undefined;
-  const borrowLimit = userPoolData
-    ? userPoolData.estimates.totalEffectiveLiabilities / newEffectiveCollateral
-    : undefined;
 
   if (txStatus === TxStatus.SUCCESS && Number(toWithdraw) != 0) {
     setToWithdraw('0');
@@ -66,12 +61,7 @@ export const WithdrawAnvil: React.FC<ReserveComponentProps> = ({ poolId, assetId
       reason: undefined,
       disabledType: undefined,
     };
-    if (curSupplied == 0 && txStatus !== TxStatus.SUCCESS) {
-      errorProps.isSubmitDisabled = true;
-      errorProps.isMaxDisabled = true;
-      errorProps.reason = 'You do not have any assets to withdraw.';
-      errorProps.disabledType = 'warning';
-    } else if (!toWithdraw) {
+    if (!toWithdraw) {
       errorProps.isSubmitDisabled = true;
       errorProps.isMaxDisabled = false;
       errorProps.reason = 'Please enter an amount to withdraw.';
@@ -81,30 +71,20 @@ export const WithdrawAnvil: React.FC<ReserveComponentProps> = ({ poolId, assetId
       errorProps.isMaxDisabled = false;
       errorProps.reason = `You cannot supply more than ${decimals} decimal places.`;
       errorProps.disabledType = 'warning';
-    } else if (borrowLimit == undefined || borrowLimit > 0.9804) {
-      // @dev: a borrow limit of 98.04% ~= a health factor of 1.02
+    } else if (simResult?.result.isErr()) {
       errorProps.isSubmitDisabled = true;
       errorProps.isMaxDisabled = false;
-      errorProps.reason =
-        'Your withdraw is too high and you have exceeded the max borrow limit of 98%. Current value: ' +
-        toPercentage(borrowLimit);
+      errorProps.reason = ContractErrorType[simResult.result.unwrapErr().type];
       errorProps.disabledType = 'warning';
-    } else if (poolTokens < scaleInputToBigInt(toWithdraw, decimals)) {
-      errorProps.isSubmitDisabled = true;
-      errorProps.isMaxDisabled = false;
-      errorProps.reason = "You cannot withdraw more than the pool's balance.";
-      errorProps.disabledType = 'warning';
-    } else {
-      errorProps.isSubmitDisabled = false;
-      errorProps.isMaxDisabled = false;
     }
 
     return errorProps;
-  }, [toWithdraw, borrowLimit, poolTokens, decimals, curSupplied]);
+  }, [toWithdraw, simResult]);
   // verify that the user can act
 
   const handleWithdrawAmountChange = (withdrawInput: string) => {
-    if (reserve && userPoolData) {
+    if (reserve && userPoolData?.positionEstimates.collateral.get(assetId)) {
+      let curSupplied = userPoolData.positionEstimates.collateral.get(assetId) ?? 0;
       let realWithdraw = withdrawInput;
       let num_withdraw = Number(withdrawInput);
       if (num_withdraw > curSupplied) {
@@ -120,12 +100,13 @@ export const WithdrawAnvil: React.FC<ReserveComponentProps> = ({ poolId, assetId
 
   const handleWithdrawMax = () => {
     if (reserve && userPoolData) {
-      if (userPoolData.estimates.totalEffectiveLiabilities == 0) {
+      let curSupplied = userPoolData.positionEstimates.collateral.get(assetId) ?? 0;
+      if (userPoolData.positionEstimates.totalEffectiveLiabilities == 0) {
         handleWithdrawAmountChange((curSupplied * 1.05).toFixed(decimals));
       } else {
         let to_bounded_hf =
-          (userPoolData.estimates.totalEffectiveCollateral -
-            userPoolData.estimates.totalEffectiveLiabilities * 1.02) /
+          (userPoolData.positionEstimates.totalEffectiveCollateral -
+            userPoolData.positionEstimates.totalEffectiveLiabilities * 1.02) /
           1.02;
         let to_wd = to_bounded_hf / (assetPrice * reserve.getCollateralFactor());
         let withdrawAmount = Math.min(to_wd, curSupplied) + 1 / 10 ** decimals;
@@ -134,7 +115,7 @@ export const WithdrawAnvil: React.FC<ReserveComponentProps> = ({ poolId, assetId
     }
   };
 
-  const handleSubmitTransaction = async () => {
+  const handleSubmitTransaction = async (sim: boolean) => {
     if (toWithdrawSubmit && connected && reserve) {
       let submitArgs: SubmitArgs = {
         from: walletAddress,
@@ -148,7 +129,7 @@ export const WithdrawAnvil: React.FC<ReserveComponentProps> = ({ poolId, assetId
           },
         ],
       };
-      await poolSubmit(poolId, submitArgs, false);
+      return await poolSubmit(poolId, submitArgs, sim);
     }
   };
 
@@ -190,7 +171,7 @@ export const WithdrawAnvil: React.FC<ReserveComponentProps> = ({ poolId, assetId
               isMaxDisabled={isMaxDisabled}
             />
             <OpaqueButton
-              onClick={handleSubmitTransaction}
+              onClick={() => handleSubmitTransaction(false)}
               palette={theme.palette.lend}
               sx={{ minWidth: '108px', marginLeft: '12px', padding: '6px' }}
               disabled={isSubmitDisabled}
@@ -208,18 +189,32 @@ export const WithdrawAnvil: React.FC<ReserveComponentProps> = ({ poolId, assetId
           <Value title="Amount to withdraw" value={`${toWithdraw ?? '0'} ${symbol}`} />
           <ValueChange
             title="Your total supplied"
-            curValue={`${toBalance(curSupplied, decimals)} ${symbol}`}
-            newValue={`${toBalance(curSupplied - Number(toWithdraw ?? '0'), decimals)} ${symbol}`}
+            curValue={`${toBalance(
+              userPoolData?.positionEstimates.collateral.get(assetId) ?? 0,
+              decimals
+            )} ${symbol}`}
+            newValue={`${toBalance(
+              newPositionEstimate?.collateral.get(assetId) ?? 0,
+              decimals
+            )} ${symbol}`}
           />
           <ValueChange
             title="Borrow capacity"
-            curValue={`$${toBalance(oldBorrowCap)}`}
-            newValue={`$${toBalance(borrowCap)}`}
+            curValue={`$${toBalance(userPoolData?.positionEstimates.borrowCap)}`}
+            newValue={`$${toBalance(newPositionEstimate?.borrowCap)}`}
           />
           <ValueChange
             title="Borrow limit"
-            curValue={toPercentage(Number.isFinite(oldBorrowLimit) ? oldBorrowLimit : 0)}
-            newValue={toPercentage(Number.isFinite(borrowLimit) ? borrowLimit : 0)}
+            curValue={toPercentage(
+              Number.isFinite(userPoolData?.positionEstimates.borrowLimit)
+                ? userPoolData?.positionEstimates.borrowLimit
+                : 0
+            )}
+            newValue={toPercentage(
+              Number.isFinite(newPositionEstimate?.borrowLimit)
+                ? newPositionEstimate?.borrowLimit
+                : 0
+            )}
           />
         </TxOverview>
       </Section>
