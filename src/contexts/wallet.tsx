@@ -304,7 +304,7 @@ export const WalletProvider = ({ children = null as any }) => {
       }
       if (sim_response.result.isErr()) {
         // TODO: implement error message from type
-        setFailureMessage(sim_response.result.unwrapErr().message);
+        setFailureMessage(ContractErrorType[sim_response.result.unwrapErr().type]);
         setTxStatus(TxStatus.FAIL);
         return;
       }
