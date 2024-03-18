@@ -1,5 +1,6 @@
 import MoreHorizRoundedIcon from '@mui/icons-material/MoreHorizRounded';
 import { Alert, IconButton, Menu, MenuItem, Snackbar, useTheme } from '@mui/material';
+import Link from 'next/link';
 import React, { useEffect, useState } from 'react';
 import { ViewType, useSettings } from '../../contexts';
 import { useStore } from '../../store/store';
@@ -67,6 +68,11 @@ export const NavMenu = () => {
             backgroundColor: theme.palette.menu.main,
           }}
         >
+          <Link href="/network" >
+            <MenuItem onClick={handleClose} sx={{ color: '#FFFFFF' }}>
+              Network Config
+            </MenuItem>
+          </Link>
           <a href="https://docs.blend.capital/" target="_blank" rel="noreferrer">
             <MenuItem onClick={handleClose} sx={{ color: '#FFFFFF' }}>
               Docs
@@ -106,6 +112,11 @@ export const NavMenu = () => {
             title="Backstop"
             sx={{ width: '90%', justifyContent: 'left', marginBottom: '6px' }}
           />
+          <Link href="/network" >
+            <MenuItem onClick={handleClose} sx={{ color: '#FFFFFF' }}>
+              Network Config
+            </MenuItem>
+          </Link>
           <a href="https://docs.blend.capital/" target="_blank" rel="noreferrer">
             <MenuItem onClick={handleClose} sx={{ color: '#FFFFFF' }}>
               Docs

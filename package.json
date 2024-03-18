@@ -17,6 +17,7 @@
     "@emotion/styled": "^11.9.3",
     "@mui/icons-material": "^5.8.4",
     "@mui/material": "^5.8.6",
+    "@stellar/freighter-api": "^2.0.0",
     "bignumber.js": "^9.0.2",
     "copy-to-clipboard": "^3.3.3",
     "next": "^12.3.4",
