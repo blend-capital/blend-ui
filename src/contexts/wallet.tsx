@@ -22,6 +22,7 @@ import React, { useContext, useEffect, useState } from 'react';
 import {
   BASE_FEE,
   Operation,
+  SorobanDataBuilder,
   SorobanRpc,
   Transaction,
   TransactionBuilder,
@@ -48,9 +49,10 @@ export interface IWalletContext {
   connect: () => Promise<void>;
   disconnect: () => void;
   clearLastTx: () => void;
-  restore: (
-    simulation: SorobanRpc.Api.SimulateTransactionRestoreResponse
-  ) => Promise<ContractResponse<void>>;
+  restore: (restorePreamble: {
+    minResourceFee: string;
+    transactionData: SorobanDataBuilder;
+  }) => Promise<ContractResponse<void>>;
   poolSubmit: (
     poolId: string,
     submitArgs: SubmitArgs,
@@ -226,17 +228,18 @@ export const WalletProvider = ({ children = null as any }) => {
     }
   }
 
-  async function restore(
-    simulation: SorobanRpc.Api.SimulateTransactionRestoreResponse
-  ): Promise<ContractResponse<void>> {
+  async function restore(restorePreamble: {
+    minResourceFee: string;
+    transactionData: SorobanDataBuilder;
+  }): Promise<ContractResponse<void>> {
     let account = await rpc.getAccount(walletAddress);
     // if (SorobanRpc.Api.isSimulationRestore(simulation)) {
     setTxStatus(TxStatus.BUILDING);
-    let fee = parseInt(simulation.restorePreamble.minResourceFee) + parseInt(BASE_FEE);
+    let fee = parseInt(restorePreamble.minResourceFee) + parseInt(BASE_FEE);
     let restore_tx = new TransactionBuilder(account, { fee: fee.toString() })
       .setNetworkPassphrase(network.passphrase)
       .setTimeout(0)
-      .setSorobanData(simulation.restorePreamble.transactionData.build())
+      .setSorobanData(restorePreamble.transactionData.build())
       .addOperation(Operation.restoreFootprint({}))
       .build();
     let signed_restore_tx = new Transaction(await sign(restore_tx.toXDR()), network.passphrase);

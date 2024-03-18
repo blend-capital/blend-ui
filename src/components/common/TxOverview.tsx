@@ -1,6 +1,6 @@
+import { ContractResponse, Q4W, RestoreError, UserPositions } from '@blend-capital/blend-sdk';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { Alert, AlertColor, Box, BoxProps, Typography } from '@mui/material';
-import { SorobanRpc } from 'stellar-sdk';
 import { useWallet } from '../../contexts/wallet';
 import theme from '../../theme';
 import { OpaqueButton } from './OpaqueButton';
@@ -8,7 +8,7 @@ export interface TxOverviewProps extends BoxProps {
   isDisabled: boolean;
   disabledType: AlertColor | undefined;
   reason: string | undefined;
-  simulation?: SorobanRpc.Api.SimulateTransactionResponse;
+  simResponse: ContractResponse<UserPositions | bigint | Q4W> | undefined;
 }
 
 export interface SubmitError {
@@ -22,7 +22,7 @@ export const TxOverview: React.FC<TxOverviewProps> = ({
   isDisabled,
   disabledType,
   reason,
-  simulation,
+  simResponse,
   children,
   sx,
   ...props
@@ -32,11 +32,12 @@ export const TxOverview: React.FC<TxOverviewProps> = ({
   const message = reason ?? 'Unable to process your transaction.';
 
   function handleRestore() {
-    if (simulation && SorobanRpc.Api.isSimulationRestore(simulation)) restore(simulation);
+    let error = simResponse?.result.unwrapErr() as RestoreError;
+    restore(error.restorePreamble);
   }
 
   function checkError() {
-    if (message === 'InvokeHostFunctionEntryArchived') {
+    if (simResponse?.result.isErr() && simResponse.result.unwrapErr() instanceof RestoreError) {
       return (
         <Box
           sx={{
@@ -92,9 +93,11 @@ export const TxOverview: React.FC<TxOverviewProps> = ({
       );
     }
   }
+
   if (isDisabled) {
     return checkError();
   }
+
   return (
     <Box
       sx={{

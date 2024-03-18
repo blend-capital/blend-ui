@@ -77,7 +77,7 @@ export const BackstopQueueAnvil: React.FC<PoolComponentProps> = ({ poolId }) => 
       setToQueue(userBackstopTokens.toFixed(7));
     }
   };
-
+  console.log(userPoolBackstopEst);
   const handleSubmitTransaction = async (sim: boolean) => {
     if (toQueue && connected && validDecimals) {
       let depositArgs: PoolBackstopActionArgs = {
@@ -146,7 +146,7 @@ export const BackstopQueueAnvil: React.FC<PoolComponentProps> = ({ poolId }) => 
           isDisabled={isSubmitDisabled}
           disabledType={disabledType}
           reason={reason}
-          simulation={simResponse?.simulation}
+          simResponse={simResponse}
         >
           <Value title="Amount to queue" value={`${toQueue ?? '0'} BLND-USDC LP`} />
           <Value

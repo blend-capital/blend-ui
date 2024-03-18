@@ -201,7 +201,7 @@ export const WithdrawAnvil: React.FC<ReserveComponentProps> = ({ poolId, assetId
           </Box>
         </Box>
         <TxOverview
-          simulation={simResponse?.simulation}
+          simResponse={simResponse}
           isDisabled={isSubmitDisabled}
           disabledType={disabledType}
           reason={reason}

@@ -140,10 +140,10 @@ export const BackstopDepositAnvil: React.FC<PoolComponentProps> = ({ poolId }) =
           </Box>
         </Box>
         <TxOverview
-          simulation={simResponse?.simulation}
           isDisabled={isSubmitDisabled}
           disabledType={disabledType}
           reason={reason}
+          simResponse={simResponse}
         >
           <Value title="Amount to deposit" value={`${toDeposit ?? '0'} BLND-USDC LP`} />
           <ValueChange
