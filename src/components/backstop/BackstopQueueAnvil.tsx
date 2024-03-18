@@ -77,7 +77,6 @@ export const BackstopQueueAnvil: React.FC<PoolComponentProps> = ({ poolId }) => 
       setToQueue(userBackstopTokens.toFixed(7));
     }
   };
-  console.log(userPoolBackstopEst);
   const handleSubmitTransaction = async (sim: boolean) => {
     if (toQueue && connected && validDecimals) {
       let depositArgs: PoolBackstopActionArgs = {

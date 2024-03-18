@@ -142,13 +142,6 @@ export const BackstopMintAnvil: React.FC<{
         !!currentPoolUSDCBalance && bigintValue > currentPoolUSDCBalance / BigInt(2) - BigInt(1);
       const isLargerBLND =
         !!currentPoolBLNDBalance && bigintValue > currentPoolBLNDBalance / BigInt(2) - BigInt(1);
-      console.log(
-        currentDepositToken,
-        isLargerBLND,
-        isLargerUSDC,
-        bigintValue,
-        currentDepositTokenBalance
-      );
 
       if (isLargerBLND || isLargerUSDC) {
         setLoadingEstimate(false);
