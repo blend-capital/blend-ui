@@ -1,7 +1,12 @@
-import { PoolBackstopActionArgs } from '@blend-capital/blend-sdk';
+import {
+  ContractErrorType,
+  ContractResponse,
+  PoolBackstopActionArgs,
+} from '@blend-capital/blend-sdk';
 import { Box, Typography, useTheme } from '@mui/material';
 import { useMemo, useState } from 'react';
-import { TxStatus, useWallet } from '../../contexts/wallet';
+import { TxStatus, TxType, useWallet } from '../../contexts/wallet';
+import { RPC_DEBOUNCE_DELAY, useDebouncedState } from '../../hooks/debounce';
 import { useStore } from '../../store/store';
 import { toBalance } from '../../utils/formatter';
 import { scaleInputToBigInt } from '../../utils/scval';
@@ -16,25 +21,32 @@ import { ValueChange } from '../common/ValueChange';
 
 export const BackstopDepositAnvil: React.FC<PoolComponentProps> = ({ poolId }) => {
   const theme = useTheme();
-  const { connected, walletAddress, backstopDeposit, txStatus } = useWallet();
+  const { connected, walletAddress, backstopDeposit, txStatus, txType } = useWallet();
 
   const backstopData = useStore((state) => state.backstop);
   const backstopPoolData = useStore((state) => state.backstop?.pools?.get(poolId));
   const userBackstopData = useStore((state) => state.backstopUserData);
-  const userPoolBackstopBalance = userBackstopData?.balances.get(poolId);
-
+  const userBackstopEst = userBackstopData?.estimates.get(poolId);
   const userBalance = Number(userBackstopData?.tokens ?? BigInt(0)) / 1e7;
   const decimals = 7;
-  const curDeposit =
-    userPoolBackstopBalance && backstopPoolData
-      ? (Number(userPoolBackstopBalance.shares) / 1e7) *
-        (Number(backstopPoolData.poolBalance.tokens) / Number(backstopPoolData.poolBalance.shares))
+  let userBackstopTokens =
+    userBackstopEst && backstopData
+      ? userBackstopEst.totalSpotValue / backstopData.lpTokenPrice
       : 0;
-
+  let sharesToTokens = backstopPoolData
+    ? Number(backstopPoolData.poolBalance.tokens) / Number(backstopPoolData.poolBalance.shares)
+    : 0;
   const [toDeposit, setToDeposit] = useState<string>('');
-  if (txStatus === TxStatus.SUCCESS && Number(toDeposit) != 0) {
-    setToDeposit('0');
+  const [simResponse, setSimResponse] = useState<ContractResponse<bigint>>();
+
+  if (txStatus === TxStatus.SUCCESS && txType === TxType.CONTRACT && Number(toDeposit) != 0) {
+    setToDeposit('');
   }
+
+  useDebouncedState(toDeposit, RPC_DEBOUNCE_DELAY, txType, async () => {
+    handleSubmitTransaction(true);
+  });
+
   // verify that the user can act
   const { isSubmitDisabled, isMaxDisabled, reason, disabledType } = useMemo(() => {
     const errorProps: SubmitError = {
@@ -43,29 +55,16 @@ export const BackstopDepositAnvil: React.FC<PoolComponentProps> = ({ poolId }) =
       reason: undefined,
       disabledType: undefined,
     };
-    if (userBalance <= 0 && txStatus !== TxStatus.SUCCESS) {
-      errorProps.isSubmitDisabled = true;
-      errorProps.isMaxDisabled = true;
-      errorProps.reason = 'You do not have any available balance to deposit.';
-      errorProps.disabledType = 'warning';
-    } else if (!toDeposit) {
-      errorProps.isSubmitDisabled = true;
-      errorProps.isMaxDisabled = false;
-      errorProps.reason = 'Please enter an amount to deposit.';
-      errorProps.disabledType = 'info';
-    } else if (Number(toDeposit) > userBalance) {
-      errorProps.isSubmitDisabled = true;
-      errorProps.isMaxDisabled = false;
-      errorProps.reason = 'You do not have enough available balance to deposit.';
-      errorProps.disabledType = 'warning';
-    } else if (toDeposit.split('.')[1]?.length > decimals) {
+    if (toDeposit.split('.')[1]?.length > decimals) {
       errorProps.isSubmitDisabled = true;
       errorProps.isMaxDisabled = false;
       errorProps.reason = `You cannot supply more than ${decimals} decimal places.`;
       errorProps.disabledType = 'warning';
-    } else {
-      errorProps.isSubmitDisabled = false;
+    } else if (simResponse?.result.isErr()) {
+      errorProps.isSubmitDisabled = true;
       errorProps.isMaxDisabled = false;
+      errorProps.reason = ContractErrorType[simResponse.result.unwrapErr().type];
+      errorProps.disabledType = 'warning';
     }
     return errorProps;
   }, [toDeposit, userBalance]);
@@ -76,14 +75,15 @@ export const BackstopDepositAnvil: React.FC<PoolComponentProps> = ({ poolId }) =
     }
   };
 
-  const handleSubmitTransaction = async () => {
+  const handleSubmitTransaction = async (sim: boolean) => {
     if (toDeposit && connected) {
       let depositArgs: PoolBackstopActionArgs = {
         from: walletAddress,
         pool_address: poolId,
         amount: scaleInputToBigInt(toDeposit, 7),
       };
-      await backstopDeposit(depositArgs, false);
+      let response = await backstopDeposit(depositArgs, sim);
+      setSimResponse(response);
     }
   };
 
@@ -125,7 +125,7 @@ export const BackstopDepositAnvil: React.FC<PoolComponentProps> = ({ poolId }) =
               isMaxDisabled={isMaxDisabled}
             />
             <OpaqueButton
-              onClick={handleSubmitTransaction}
+              onClick={() => handleSubmitTransaction(false)}
               palette={theme.palette.backstop}
               sx={{ minWidth: '108px', marginLeft: '12px', padding: '6px' }}
               disabled={isSubmitDisabled}
@@ -139,12 +139,21 @@ export const BackstopDepositAnvil: React.FC<PoolComponentProps> = ({ poolId }) =
             </Typography>
           </Box>
         </Box>
-        <TxOverview isDisabled={isSubmitDisabled} disabledType={disabledType} reason={reason}>
+        <TxOverview
+          isDisabled={isSubmitDisabled}
+          disabledType={disabledType}
+          reason={reason}
+          simResponse={simResponse}
+        >
           <Value title="Amount to deposit" value={`${toDeposit ?? '0'} BLND-USDC LP`} />
           <ValueChange
             title="Your total deposit"
-            curValue={`${toBalance(curDeposit)} BLND-USDC LP`}
-            newValue={`${toBalance(curDeposit + Number(toDeposit ?? '0'))} BLND-USDC LP`}
+            curValue={`${toBalance(userBackstopTokens)} BLND-USDC LP`}
+            newValue={`${toBalance(
+              simResponse
+                ? userBackstopTokens + (Number(simResponse.result.unwrap()) / 1e7) * sharesToTokens
+                : 0
+            )} BLND-USDC LP`}
           />
         </TxOverview>
       </Section>

@@ -21,6 +21,8 @@ import {
 import React, { useContext, useEffect, useState } from 'react';
 import {
   BASE_FEE,
+  Operation,
+  SorobanDataBuilder,
   SorobanRpc,
   Transaction,
   TransactionBuilder,
@@ -43,9 +45,14 @@ export interface IWalletContext {
   txStatus: TxStatus;
   lastTxHash: string | undefined;
   lastTxFailure: string | undefined;
+  txType: TxType;
   connect: () => Promise<void>;
   disconnect: () => void;
   clearLastTx: () => void;
+  restore: (restorePreamble: {
+    minResourceFee: string;
+    transactionData: SorobanDataBuilder;
+  }) => Promise<ContractResponse<void>>;
   poolSubmit: (
     poolId: string,
     submitArgs: SubmitArgs,
@@ -95,7 +102,13 @@ export enum TxStatus {
   SIGNING,
   SUBMITTING,
   SUCCESS,
+  RESTORED,
   FAIL,
+}
+
+export enum TxType {
+  CONTRACT,
+  RESTORE,
 }
 
 const WalletContext = React.createContext<IWalletContext | undefined>(undefined);
@@ -115,7 +128,7 @@ export const WalletProvider = ({ children = null as any }) => {
   const [txStatus, setTxStatus] = useState<TxStatus>(TxStatus.NONE);
   const [txHash, setTxHash] = useState<string | undefined>(undefined);
   const [txFailure, setTxFailure] = useState<string | undefined>(undefined);
-
+  const [txType, setTxType] = useState<TxType>(TxType.CONTRACT);
   // wallet state
   const [walletAddress, setWalletAddress] = useState<string>('');
 
@@ -215,28 +228,30 @@ export const WalletProvider = ({ children = null as any }) => {
     }
   }
 
-  // async function restore(
-  //   simulation: SorobanRpc.Api.SimulateTransactionRestoreResponse,
-  //   transaction: Transaction
-  // ): Promise<ContractResponse<void>> {
-  //   let account = await rpc.getAccount(walletAddress);
-  //   // if (SorobanRpc.Api.isSimulationRestore(simulation)) {
-  //   setTxStatus(TxStatus.BUILDING);
-  //   let fee = parseInt(simulation.restorePreamble.minResourceFee) + parseInt(transaction.fee);
-  //   let restore_tx = new TransactionBuilder(account, { fee: fee.toString() })
-  //     .setNetworkPassphrase(network.passphrase)
-  //     .setSorobanData(simulation.restorePreamble.transactionData.build())
-  //     .addOperation(Operation.restoreFootprint({}))
-  //     .build();
-  //   let signed_restore_tx = new Transaction(await sign(restore_tx.toXDR()), network.passphrase);
-  //   setTxHash(signed_restore_tx.hash().toString('hex'));
-  //   let restore_tx_resp = await sendTransaction(signed_restore_tx, (result: string) => undefined);
-  //   if (restore_tx_resp) {
-  //     return restore_tx_resp;
-  //   } else {
-  //     throw new Error('Restore transaction failed');
-  //   }
-  // }
+  async function restore(restorePreamble: {
+    minResourceFee: string;
+    transactionData: SorobanDataBuilder;
+  }): Promise<ContractResponse<void>> {
+    let account = await rpc.getAccount(walletAddress);
+    // if (SorobanRpc.Api.isSimulationRestore(simulation)) {
+    setTxStatus(TxStatus.BUILDING);
+    let fee = parseInt(restorePreamble.minResourceFee) + parseInt(BASE_FEE);
+    let restore_tx = new TransactionBuilder(account, { fee: fee.toString() })
+      .setNetworkPassphrase(network.passphrase)
+      .setTimeout(0)
+      .setSorobanData(restorePreamble.transactionData.build())
+      .addOperation(Operation.restoreFootprint({}))
+      .build();
+    let signed_restore_tx = new Transaction(await sign(restore_tx.toXDR()), network.passphrase);
+    setTxHash(signed_restore_tx.hash().toString('hex'));
+    setTxType(TxType.RESTORE);
+    let restore_tx_resp = await sendTransaction(signed_restore_tx, (_: string) => undefined);
+    if (restore_tx_resp) {
+      return restore_tx_resp;
+    } else {
+      throw new Error('Restore transaction failed');
+    }
+  }
 
   async function sendTransaction<T>(
     transaction: Transaction,
@@ -336,6 +351,7 @@ export const WalletProvider = ({ children = null as any }) => {
     setTxStatus(TxStatus.NONE);
     setTxHash(undefined);
     setTxFailure(undefined);
+    setTxType(TxType.CONTRACT);
   }
 
   //********** Pool Functions ***********/
@@ -570,9 +586,11 @@ export const WalletProvider = ({ children = null as any }) => {
         txStatus,
         lastTxHash: txHash,
         lastTxFailure: txFailure,
+        txType,
         connect,
         disconnect,
         clearLastTx,
+        restore,
         poolSubmit,
         poolClaim,
         backstopDeposit,

@@ -8,7 +8,7 @@ import {
 } from '@blend-capital/blend-sdk';
 import { Box, Typography, useTheme } from '@mui/material';
 import { useMemo, useState } from 'react';
-import { TxStatus, useWallet } from '../../contexts/wallet';
+import { TxStatus, TxType, useWallet } from '../../contexts/wallet';
 import { RPC_DEBOUNCE_DELAY, useDebouncedState } from '../../hooks/debounce';
 import { useStore } from '../../store/store';
 import { toBalance, toPercentage } from '../../utils/formatter';
@@ -25,7 +25,7 @@ import { ValueChange } from '../common/ValueChange';
 
 export const RepayAnvil: React.FC<ReserveComponentProps> = ({ poolId, assetId }) => {
   const theme = useTheme();
-  const { connected, walletAddress, poolSubmit, txStatus } = useWallet();
+  const { connected, walletAddress, poolSubmit, txStatus, txType } = useWallet();
 
   const account = useStore((state) => state.account);
   const poolData = useStore((state) => state.pools.get(poolId));
@@ -33,20 +33,21 @@ export const RepayAnvil: React.FC<ReserveComponentProps> = ({ poolId, assetId })
   const userBalance = useStore((state) => state.balances.get(assetId)) ?? BigInt(0);
 
   const [toRepay, setToRepay] = useState<string>('');
-  const [simResult, setSimResult] = useState<ContractResponse<Positions> | undefined>();
+  const [simResponse, setSimResponse] = useState<ContractResponse<Positions>>();
+
   const [validDecimals, setValidDecimals] = useState<boolean>(true);
 
-  useDebouncedState(toRepay, RPC_DEBOUNCE_DELAY, async () => {
+  useDebouncedState(toRepay, RPC_DEBOUNCE_DELAY, txType, async () => {
     if (validDecimals) {
-      let sim = await handleSubmitTransaction(true);
-      if (sim) {
-        setSimResult(sim);
+      let response = await handleSubmitTransaction(true);
+      if (response) {
+        setSimResponse(response);
       }
     }
   });
   let newPositionEstimate =
-    poolData && simResult && simResult.result.isOk()
-      ? PositionEstimates.build(poolData, simResult.result.unwrap())
+    poolData && simResponse && simResponse.result.isOk()
+      ? PositionEstimates.build(poolData, simResponse.result.unwrap())
       : undefined;
 
   const reserve = poolData?.reserves.get(assetId);
@@ -76,8 +77,8 @@ export const RepayAnvil: React.FC<ReserveComponentProps> = ({ poolId, assetId })
     Number(toRepay) > (userPoolData.positionEstimates.liabilities.get(assetId) ?? 0)
       ? Number(toRepay) - (userPoolData.positionEstimates.liabilities.get(assetId) ?? 0)
       : 0;
-  if (txStatus === TxStatus.SUCCESS && Number(toRepay) != 0) {
-    setToRepay('0');
+  if (txStatus === TxStatus.SUCCESS && txType === TxType.CONTRACT && Number(toRepay) != 0) {
+    setToRepay('');
   }
   // verify that the user can act
   const { isSubmitDisabled, isMaxDisabled, reason, disabledType } = useMemo(() => {
@@ -98,15 +99,15 @@ export const RepayAnvil: React.FC<ReserveComponentProps> = ({ poolId, assetId })
       errorProps.isMaxDisabled = false;
       errorProps.reason = `You cannot supply more than ${decimals} decimal places.`;
       errorProps.disabledType = 'warning';
-    } else if (simResult?.result.isErr()) {
+    } else if (simResponse?.result.isErr()) {
       errorProps.isSubmitDisabled = true;
       errorProps.isMaxDisabled = false;
-      errorProps.reason = ContractErrorType[simResult.result.unwrapErr().type];
+      errorProps.reason = ContractErrorType[simResponse.result.unwrapErr().type];
       errorProps.disabledType = 'warning';
     }
 
     return errorProps;
-  }, [freeUserBalanceScaled, toRepay, simResult]);
+  }, [freeUserBalanceScaled, toRepay, simResponse]);
 
   const handleRepayMax = () => {
     if (userPoolData) {
@@ -187,7 +188,12 @@ export const RepayAnvil: React.FC<ReserveComponentProps> = ({ poolId, assetId })
             </Typography>
           </Box>
         </Box>
-        <TxOverview isDisabled={isSubmitDisabled} disabledType={disabledType} reason={reason}>
+        <TxOverview
+          simResponse={simResponse}
+          isDisabled={isSubmitDisabled}
+          disabledType={disabledType}
+          reason={reason}
+        >
           <Value title="Amount to repay" value={`${toRepay ?? '0'} ${symbol}`} />
           {returnedTokens != 0 && (
             <Value title="Amount to return" value={`${toBalance(returnedTokens)} ${symbol}`} />

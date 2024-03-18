@@ -1,6 +1,6 @@
 import { Box } from '@mui/material';
 import { useRouter } from 'next/router';
-import { TxStatus, useWallet } from '../../contexts/wallet';
+import { TxStatus, TxType, useWallet } from '../../contexts/wallet';
 import { OverlayModalFail } from './OverlayModalFail';
 import { OverlayModalSuccess } from './OverlayModalSuccess';
 import { OverlayModalText } from './OverlayModalText';
@@ -11,7 +11,7 @@ export interface CloseableOverlayProps {
 
 export const OverlayModal: React.FC = () => {
   const router = useRouter();
-  const { txStatus, clearLastTx } = useWallet();
+  const { txStatus, txType, clearLastTx } = useWallet();
 
   const display = txStatus !== TxStatus.NONE ? 'flex' : 'none';
 
@@ -21,7 +21,7 @@ export const OverlayModal: React.FC = () => {
     const returnToHomePage = txStatus != TxStatus.FAIL;
     clearLastTx();
 
-    if (returnToHomePage) {
+    if (returnToHomePage && txType != TxType.RESTORE) {
       if (router.route == '/') {
         router.push({ pathname: '/' });
       } else if (router.route.includes('backstop')) {

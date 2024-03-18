@@ -8,7 +8,7 @@ import {
 } from '@blend-capital/blend-sdk';
 import { Box, Typography, useTheme } from '@mui/material';
 import { useMemo, useState } from 'react';
-import { TxStatus, useWallet } from '../../contexts/wallet';
+import { TxStatus, TxType, useWallet } from '../../contexts/wallet';
 import { RPC_DEBOUNCE_DELAY, useDebouncedState } from '../../hooks/debounce';
 import { useStore } from '../../store/store';
 import { toBalance, toPercentage } from '../../utils/formatter';
@@ -24,28 +24,28 @@ import { ValueChange } from '../common/ValueChange';
 
 export const WithdrawAnvil: React.FC<ReserveComponentProps> = ({ poolId, assetId }) => {
   const theme = useTheme();
-  const { connected, walletAddress, poolSubmit, txStatus } = useWallet();
+  const { connected, walletAddress, poolSubmit, txStatus, txType } = useWallet();
 
   const poolData = useStore((state) => state.pools.get(poolId));
   const userPoolData = useStore((state) => state.userPoolData.get(poolId));
 
   const [toWithdrawSubmit, setToWithdrawSubmit] = useState<string | undefined>(undefined);
   const [toWithdraw, setToWithdraw] = useState<string>('');
-  const [simResult, setSimResult] = useState<ContractResponse<Positions>>();
+  const [simResponse, setSimResponse] = useState<ContractResponse<Positions>>();
   const [validDecimals, setValidDecimals] = useState<boolean>(true);
 
-  useDebouncedState(toWithdrawSubmit, RPC_DEBOUNCE_DELAY, async () => {
+  useDebouncedState(toWithdrawSubmit, RPC_DEBOUNCE_DELAY, txType, async () => {
     if (validDecimals) {
-      let sim = await handleSubmitTransaction(true);
-      if (sim) {
-        setSimResult(sim);
+      let response = await handleSubmitTransaction(true);
+      if (response) {
+        setSimResponse(response);
       }
     }
   });
 
   let newPositionEstimate =
-    poolData && simResult && simResult.result.isOk()
-      ? PositionEstimates.build(poolData, simResult.result.unwrap())
+    poolData && simResponse && simResponse.result.isOk()
+      ? PositionEstimates.build(poolData, simResponse.result.unwrap())
       : undefined;
 
   const reserve = poolData?.reserves.get(assetId);
@@ -64,8 +64,8 @@ export const WithdrawAnvil: React.FC<ReserveComponentProps> = ({ poolId, assetId
       ? newPositionEstimate?.borrowLimit
       : 0;
 
-  if (txStatus === TxStatus.SUCCESS && Number(toWithdraw) != 0) {
-    setToWithdraw('0');
+  if (txStatus === TxStatus.SUCCESS && txType === TxType.CONTRACT && Number(toWithdraw) != 0) {
+    setToWithdraw('');
   }
   // verify that the user can act
   const { isSubmitDisabled, isMaxDisabled, reason, disabledType } = useMemo(() => {
@@ -86,15 +86,15 @@ export const WithdrawAnvil: React.FC<ReserveComponentProps> = ({ poolId, assetId
       errorProps.isMaxDisabled = false;
       errorProps.reason = `You cannot supply more than ${decimals} decimal places.`;
       errorProps.disabledType = 'warning';
-    } else if (simResult?.result.isErr()) {
+    } else if (simResponse?.result.isErr()) {
       errorProps.isSubmitDisabled = true;
       errorProps.isMaxDisabled = false;
-      errorProps.reason = ContractErrorType[simResult.result.unwrapErr().type];
+      errorProps.reason = ContractErrorType[simResponse.result.unwrapErr().type];
       errorProps.disabledType = 'warning';
     }
 
     return errorProps;
-  }, [toWithdraw, simResult]);
+  }, [toWithdraw, simResponse]);
   // verify that the user can act
 
   const handleWithdrawAmountChange = (withdrawInput: string) => {
@@ -200,7 +200,12 @@ export const WithdrawAnvil: React.FC<ReserveComponentProps> = ({ poolId, assetId
             </Typography>
           </Box>
         </Box>
-        <TxOverview isDisabled={isSubmitDisabled} disabledType={disabledType} reason={reason}>
+        <TxOverview
+          simResponse={simResponse}
+          isDisabled={isSubmitDisabled}
+          disabledType={disabledType}
+          reason={reason}
+        >
           <Value title="Amount to withdraw" value={`${toWithdraw ?? '0'} ${symbol}`} />
           <ValueChange
             title="Your total supplied"
