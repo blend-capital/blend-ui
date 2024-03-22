@@ -101,6 +101,7 @@ export const createUserSlice: StateCreator<DataStore, [], [], UserSlice> = (set,
         for (let reserve of Array.from(pool_data.reserves.values())) {
           if (user_balances.has(reserve.assetId)) {
             // duplicate reserve from another pool, skip
+
             continue;
           }
 
@@ -118,6 +119,7 @@ export const createUserSlice: StateCreator<DataStore, [], [], UserSlice> = (set,
                 balance.asset_issuer === reserve.tokenMetadata.asset.getIssuer()
               );
             });
+
             let balance_string = balance_line ? balance_line.balance.replace('.', '') : '0';
             user_balances.set(reserve.assetId, BigInt(balance_string));
           } else {
@@ -127,6 +129,7 @@ export const createUserSlice: StateCreator<DataStore, [], [], UserSlice> = (set,
               reserve.assetId,
               new Address(id)
             );
+
             user_balances.set(reserve.assetId, balance);
           }
         }
