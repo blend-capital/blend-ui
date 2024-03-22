@@ -57,6 +57,7 @@ export const ReserveDropdown: React.FC<ReserveDropdown> = ({ action, poolId, act
         >
           <TokenIcon
             symbol={activeReserve?.tokenMetadata?.symbol ?? 'unknown'}
+            assetId={activeReserveId}
             sx={{ height: '30px', width: '30px' }}
           />
           <Typography variant="h3" sx={{ marginLeft: '12px' }}>
@@ -90,6 +91,7 @@ export const ReserveDropdown: React.FC<ReserveDropdown> = ({ action, poolId, act
           >
             <TokenIcon
               symbol={reserve?.tokenMetadata?.symbol ?? 'unknown'}
+              assetId={reserve.assetId}
               sx={{ height: '30px', width: '30px' }}
             />
             <Typography variant="h3" sx={{ marginLeft: '12px' }}>

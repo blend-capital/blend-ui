@@ -1,5 +1,7 @@
 import { Box, BoxProps, Typography } from '@mui/material';
-import { TOKEN_META } from '../../utils/token_display';
+
+import { useStore } from '../../store/store';
+import { toCompactAddress } from '../../utils/formatter';
 import { TokenIcon } from './TokenIcon';
 
 /// @dev TODO: Consider consolidation of icons / headers
@@ -9,9 +11,10 @@ export interface TokenHeaderProps extends BoxProps {
 }
 
 export const TokenHeader: React.FC<TokenHeaderProps> = ({ id, sx, ...props }) => {
-  // TODO: Find a better way to do this
-  const code = TOKEN_META[id as keyof typeof TOKEN_META]?.code ?? 'unknown';
-  const issuer = TOKEN_META[id as keyof typeof TOKEN_META]?.issuer ?? '';
+  const assetStellarMetadata = useStore((state) => state.assetStellarMetadata);
+  const tokenMetadata = assetStellarMetadata.get(id);
+  const code = tokenMetadata?.code || id;
+  const domain = tokenMetadata?.domain || tokenMetadata?.issuer;
   return (
     <Box
       sx={{
@@ -24,7 +27,11 @@ export const TokenHeader: React.FC<TokenHeaderProps> = ({ id, sx, ...props }) =>
       }}
       {...props}
     >
-      <TokenIcon symbol={code} sx={{ width: '32px', height: '32px', marginRight: '6px' }} />
+      <TokenIcon
+        assetId={id}
+        symbol={code}
+        sx={{ width: '32px', height: '32px', marginRight: '6px' }}
+      />
       <Box
         sx={{
           display: 'flex',
@@ -35,7 +42,7 @@ export const TokenHeader: React.FC<TokenHeaderProps> = ({ id, sx, ...props }) =>
       >
         <Typography variant="body1">{code}</Typography>
         <Typography variant="body2" color="text.secondary">
-          {issuer}
+          {domain?.length === 56 ? toCompactAddress(domain) : domain}
         </Typography>
       </Box>
     </Box>
