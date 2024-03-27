@@ -78,9 +78,11 @@ export const BorrowMarketList: React.FC<PoolComponentProps> = ({ poolId }) => {
 
         <Box sx={{ width: headerWidth }} />
       </Box>
-      {Array.from(poolData.reserves.values()).map((reserve) => (
-        <BorrowMarketCard key={reserve.assetId} poolId={poolId} reserve={reserve} />
-      ))}
+      {Array.from(poolData.reserves.values())
+        .filter((reserve) => reserve.config.l_factor > 0)
+        .map((reserve) => (
+          <BorrowMarketCard key={reserve.assetId} poolId={poolId} reserve={reserve} />
+        ))}
     </Box>
   );
 };

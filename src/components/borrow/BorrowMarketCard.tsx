@@ -27,6 +27,8 @@ export const BorrowMarketCard: React.FC<BorrowMarketCardProps> = ({
 
   const tableNum = viewType === ViewType.REGULAR ? 5 : 4;
   const tableWidth = `${(100 / tableNum).toFixed(2)}%`;
+  const liabilityFactor = reserve.getLiabilityFactor();
+
   return (
     <SectionBase
       sx={{
@@ -97,9 +99,7 @@ export const BorrowMarketCard: React.FC<BorrowMarketCardProps> = ({
                 alignItems: 'center',
               }}
             >
-              <Typography variant="body1">
-                {formatter.toPercentage(reserve.getLiabilityFactor())}
-              </Typography>
+              <Typography variant="body1">{formatter.toPercentage(liabilityFactor)}</Typography>
             </Box>
           )}
           <Box
