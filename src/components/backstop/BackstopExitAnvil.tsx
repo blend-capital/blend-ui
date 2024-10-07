@@ -26,7 +26,7 @@ import { ValueChange } from '../common/ValueChange';
 export const BackstopExitAnvil = () => {
   const theme = useTheme();
   const { viewType, network } = useSettings();
-  const { walletAddress, txStatus, cometExit, txType, isLoading, createTrustline } = useWallet();
+  const { walletAddress, txStatus, cometExit, txType, isLoading, createTrustlines } = useWallet();
 
   const BLND_ID = BLND_ASSET.contractId(network.passphrase);
   const USDC_ID = USDC_ASSET.contractId(network.passphrase);
@@ -77,7 +77,7 @@ export const BackstopExitAnvil = () => {
 
   const AddBLNDTrustlineButton = (
     <OpaqueButton
-      onClick={async () => createTrustline(BLND_ASSET)}
+      onClick={async () => createTrustlines([BLND_ASSET])}
       palette={theme.palette.warning}
       sx={{ padding: '6px 24px', margin: '12px auto' }}
     >
@@ -86,7 +86,7 @@ export const BackstopExitAnvil = () => {
   );
   const AddUSDCTrustlineButton = (
     <OpaqueButton
-      onClick={async () => createTrustline(USDC_ASSET)}
+      onClick={async () => createTrustlines([USDC_ASSET])}
       palette={theme.palette.warning}
       sx={{ padding: '6px 24px', margin: '12px auto' }}
     >

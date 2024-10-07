@@ -37,7 +37,7 @@ export const BorrowAnvil: React.FC<ReserveComponentProps> = ({ poolId, assetId }
   const theme = useTheme();
   const { viewType } = useSettings();
 
-  const { connected, walletAddress, poolSubmit, txStatus, txType, createTrustline, isLoading } =
+  const { connected, walletAddress, poolSubmit, txStatus, txType, createTrustlines, isLoading } =
     useWallet();
 
   const { data: pool } = usePool(poolId);
@@ -92,7 +92,7 @@ export const BorrowAnvil: React.FC<ReserveComponentProps> = ({ poolId, assetId }
   async function handleAddAssetTrustline() {
     if (connected && reserve?.tokenMetadata?.asset) {
       const reserveAsset = reserve?.tokenMetadata?.asset;
-      await createTrustline(reserveAsset);
+      await createTrustlines([reserveAsset]);
     }
   }
 

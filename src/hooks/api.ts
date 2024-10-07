@@ -3,13 +3,15 @@ import {
   BackstopPool,
   BackstopPoolUser,
   Pool,
+  PoolEvent,
+  poolEventFromEventResponse,
   PoolOracle,
   PoolUser,
   Positions,
   Reserve,
   UserBalance,
 } from '@blend-capital/blend-sdk';
-import { Address, Asset, Horizon, SorobanRpc } from '@stellar/stellar-sdk';
+import { Address, Asset, Horizon, SorobanRpc, xdr } from '@stellar/stellar-sdk';
 import { useQuery, useQueryClient, UseQueryResult } from '@tanstack/react-query';
 import { useSettings } from '../contexts';
 import { useWallet } from '../contexts/wallet';
@@ -295,6 +297,147 @@ export function useTokenBalance(
       }
       let rpc = new SorobanRpc.Server(network.rpc, network.opts);
       return await getTokenBalance(rpc, network.passphrase, tokenId, new Address(walletAddress));
+    },
+  });
+}
+
+//********** Auction Data **********//
+
+const AUCTION_EVENT_FILTERS = [
+  [xdr.ScVal.scvSymbol('fill_auction').toXDR('base64'), '*', '*'],
+  [xdr.ScVal.scvSymbol('delete_liquidation_auction').toXDR('base64'), '*'],
+  [xdr.ScVal.scvSymbol('new_liquidation_auction').toXDR('base64'), '*'],
+  [xdr.ScVal.scvSymbol('new_auction').toXDR('base64'), '*'],
+  [xdr.ScVal.scvSymbol('delete_liquidation_auction').toXDR('base64'), '*'],
+];
+/**
+ * Fetch auction related events for the given pool ID.
+ * @param poolId - The pool ID
+ * @param enabled - Whether the query is enabled (optional - defaults to true)
+ * @returns An array of parsed pool events.
+ */
+export function useAuctionEventsLongQuery(
+  poolId: string,
+  enabled: boolean = true
+): UseQueryResult<PoolEvent[], Error> {
+  const { network } = useSettings();
+  return useQuery({
+    staleTime: USER_STALE_TIME,
+    queryKey: ['auctionEventsLong', poolId],
+    enabled,
+    queryFn: async () => {
+      try {
+        let events: PoolEvent[] = [];
+        const rpc = new SorobanRpc.Server(network.rpc, network.opts);
+        const latestLedger = (await rpc.getLatestLedger()).sequence;
+        let queryLedger = Math.round(latestLedger - (60 * 60 * 12) / 6);
+        queryLedger = Math.max(queryLedger, 100);
+
+        let resp = await rpc._getEvents({
+          startLedger: queryLedger,
+          filters: [
+            {
+              type: 'contract',
+              contractIds: [poolId],
+              topics: AUCTION_EVENT_FILTERS,
+            },
+          ],
+          limit: 1000,
+        });
+        let cursor = '';
+        while (resp.events.length > 0) {
+          for (const raw_event of resp.events) {
+            let blendPoolEvent = poolEventFromEventResponse(raw_event);
+            if (blendPoolEvent) {
+              events.push(blendPoolEvent);
+            }
+          }
+          cursor = resp.events[resp.events.length - 1].pagingToken;
+
+          resp = await rpc._getEvents({
+            cursor: cursor,
+            filters: [
+              {
+                type: 'contract',
+                contractIds: [poolId],
+                topics: AUCTION_EVENT_FILTERS,
+              },
+            ],
+            limit: 100,
+          });
+        }
+        return events;
+      } catch (e) {
+        console.error('Error fetching auction events', e);
+        return [];
+      }
+    },
+  });
+}
+
+/**
+ * Fetch auction related events for the given pool ID.
+ * @param poolId - The pool ID
+ * @param curser - The cursor for the query
+ * @param enabled - Whether the query is enabled (optional - defaults to true)
+ * @returns An object containing an events and latestLedger field.
+ */
+export function useAuctionEventsShortQuery(
+  poolId: string,
+  curser: string,
+  enabled: boolean = true
+): UseQueryResult<{ events: PoolEvent[]; latestLedger: number }, Error> {
+  const { network } = useSettings();
+  return useQuery({
+    queryKey: ['auctionEventsShort', poolId, curser],
+    enabled,
+    refetchInterval: 5 * 1000,
+    queryFn: async () => {
+      try {
+        let events: PoolEvent[] = [];
+        const rpc = new SorobanRpc.Server(network.rpc, network.opts);
+
+        let resp = await rpc._getEvents({
+          cursor: curser,
+          filters: [
+            {
+              type: 'contract',
+              contractIds: [poolId],
+              topics: AUCTION_EVENT_FILTERS,
+            },
+          ],
+          limit: 1000,
+        });
+        let cursor = '';
+        while (resp.events.length > 0) {
+          for (const raw_event of resp.events) {
+            let blendPoolEvent = poolEventFromEventResponse(raw_event);
+            if (blendPoolEvent) {
+              events.push(blendPoolEvent);
+            }
+          }
+          cursor = resp.events[resp.events.length - 1].pagingToken;
+          if (resp.events.length >= 100) {
+            resp = await rpc._getEvents({
+              cursor: cursor,
+              filters: [
+                {
+                  type: 'contract',
+                  contractIds: [poolId],
+                  topics: AUCTION_EVENT_FILTERS,
+                },
+              ],
+              limit: 100,
+            });
+          } else {
+            resp.events = [];
+          }
+        }
+        return { events, latestLedger: resp.latestLedger };
+      } catch (e) {
+        console.error('Error fetching auction events', e);
+        return undefined;
+      }
     },
   });
 }

@@ -97,7 +97,7 @@ export interface IWalletContext {
     sim: boolean
   ): Promise<SorobanRpc.Api.SimulateTransactionResponse | undefined>;
   faucet(): Promise<undefined>;
-  createTrustline(asset: Asset): Promise<void>;
+  createTrustlines(asset: Asset[]): Promise<void>;
   getNetworkDetails(): Promise<Network & { horizonUrl: string }>;
 }
 
@@ -624,18 +624,21 @@ export const WalletProvider = ({ children = null as any }) => {
     }
   }
 
-  async function createTrustline(asset: Asset) {
+  async function createTrustlines(assets: Asset[]) {
     try {
       if (connected) {
-        const trustlineOperation = Operation.changeTrust({
-          asset: asset,
-        });
         const account = await rpc.getAccount(walletAddress);
         const tx_builder = new TransactionBuilder(account, {
           networkPassphrase: network.passphrase,
           fee: BASE_FEE,
           timebounds: { minTime: 0, maxTime: Math.floor(Date.now() / 1000) + 5 * 60 * 1000 },
-        }).addOperation(trustlineOperation);
+        });
+        for (let asset of assets) {
+          const trustlineOperation = Operation.changeTrust({
+            asset: asset,
+          });
+          tx_builder.addOperation(trustlineOperation);
+        }
         const transaction = tx_builder.build();
         const signedTx = await sign(transaction.toXDR());
         const tx = new Transaction(signedTx, network.passphrase);
@@ -691,7 +694,7 @@ export const WalletProvider = ({ children = null as any }) => {
         cometJoin,
         cometExit,
         faucet,
-        createTrustline,
+        createTrustlines,
         getNetworkDetails,
       }}
     >

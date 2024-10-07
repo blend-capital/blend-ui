@@ -19,7 +19,7 @@ import { BorrowCapRing } from './BorrowCapRing';
 export const PositionOverview: React.FC<PoolComponentProps> = ({ poolId }) => {
   const { viewType } = useSettings();
   const theme = useTheme();
-  const { connected, walletAddress, poolClaim, createTrustline } = useWallet();
+  const { connected, walletAddress, poolClaim, createTrustlines } = useWallet();
 
   const { data: account, refetch: refechAccount } = useHorizonAccount();
   const { data: pool } = usePool(poolId);
@@ -53,7 +53,7 @@ export const PositionOverview: React.FC<PoolComponentProps> = ({ poolId }) => {
 
   async function handleCreateTrustlineClick() {
     if (connected) {
-      await createTrustline(BLND_ASSET);
+      await createTrustlines([BLND_ASSET]);
       refechAccount();
     }
   }
