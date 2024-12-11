@@ -13,6 +13,7 @@ import type { NextPage } from 'next';
 import { useRouter } from 'next/router';
 import { BackstopAPR } from '../components/backstop/BackstopAPR';
 import { BackstopQueueMod } from '../components/backstop/BackstopQueueMod';
+import { AllbridgeButton } from '../components/bridge/allbridge';
 import { CustomButton } from '../components/common/CustomButton';
 import { Divider } from '../components/common/Divider';
 import { FlameIcon } from '../components/common/FlameIcon';
@@ -147,6 +148,7 @@ const Backstop: NextPage = () => {
     <>
       <PoolHealthBanner poolId={safePoolId} />
       <PoolExploreBar poolId={safePoolId} />
+      <AllbridgeButton />
       <Row>
         <SectionBase type="alt" sx={{ margin: '6px', padding: '6px' }}>
           Backstop Manager

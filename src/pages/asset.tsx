@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import { AssetBorrowInfo } from '../components/asset/AssetBorrowInfo';
 import { AssetSupplyInfo } from '../components/asset/AssetSupplyInfo';
 import { InterestGraph } from '../components/asset/InterestGraph';
+import { AllbridgeButton } from '../components/bridge/allbridge';
 import { Divider } from '../components/common/Divider';
 import { ReserveExploreBar } from '../components/common/ReserveExplorerBar';
 import { Row } from '../components/common/Row';
@@ -14,6 +15,7 @@ import { PoolMenu } from '../components/pool/PoolMenu';
 import { useSettings, ViewType } from '../contexts';
 import { usePool, usePoolOracle } from '../hooks/api';
 import { toPercentage } from '../utils/formatter';
+
 const Asset: NextPage = () => {
   const router = useRouter();
   const theme = useTheme();
@@ -40,6 +42,7 @@ const Asset: NextPage = () => {
         </Section>
       </Row>
       <ReserveExploreBar poolId={safePoolId} assetId={safeAssetId} />
+      {reserve?.tokenMetadata.symbol === 'USDC' && <AllbridgeButton />}
       {hasData ? (
         <>
           <Divider />

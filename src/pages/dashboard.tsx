@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import { BackstopPreviewBar } from '../components/backstop/BackstopPreviewBar';
 import { BorrowMarketList } from '../components/borrow/BorrowMarketList';
 import { BorrowPositionList } from '../components/borrow/BorrowPositionList';
+import { AllbridgeButton } from '../components/bridge/allbridge';
 import { Divider } from '../components/common/Divider';
 import { Row } from '../components/common/Row';
 import { Section, SectionSize } from '../components/common/Section';
@@ -50,6 +51,9 @@ const Dashboard: NextPage = () => {
     <>
       <PoolHealthBanner poolId={safePoolId} />
       <PoolExploreBar poolId={safePoolId} />
+      {pool?.reserves.values().some((reserve) => reserve.tokenMetadata.symbol === 'USDC') && (
+        <AllbridgeButton />
+      )}
       <Divider />
       <BackstopPreviewBar poolId={safePoolId} />
       <Divider />
