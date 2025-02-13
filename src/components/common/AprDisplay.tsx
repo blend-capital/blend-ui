@@ -71,7 +71,7 @@ export const AprDisplay = ({
       >
         <Typography variant="body1">{formatter.toPercentage(assetApr)}</Typography>
 
-        {emissionApr && (
+        {emissionApr !== undefined && emissionApr > 0 && (
           <Box
             sx={{
               display: 'flex',

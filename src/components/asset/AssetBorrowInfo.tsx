@@ -11,6 +11,8 @@ import {
 import { toBalance, toCompactAddress, toPercentage } from '../../utils/formatter';
 import { estimateEmissionsApr } from '../../utils/math';
 import { AprDisplay } from '../common/AprDisplay';
+import { LinkBox } from '../common/LinkBox';
+import { OpaqueButton } from '../common/OpaqueButton';
 import { ReserveComponentProps } from '../common/ReserveComponentProps';
 import { Row } from '../common/Row';
 import { Section, SectionSize } from '../common/Section';
@@ -125,6 +127,26 @@ export const AssetBorrowInfo: React.FC<ReserveComponentProps> = ({ poolId, asset
           </Typography>
         </Box>
       </Row>
+      <LinkBox
+        sx={{ width: '100%' }}
+        to={{ pathname: '/borrow', query: { poolId: poolId, assetId: reserve.assetId } }}
+      >
+        <Row>
+          <OpaqueButton
+            palette={theme.palette.borrow}
+            sx={{
+              width: '100%',
+              alignItems: 'center',
+              justifyContent: 'center',
+
+              margin: '6px',
+              fontSize: '24px',
+            }}
+          >
+            Borrow
+          </OpaqueButton>
+        </Row>
+      </LinkBox>
     </Section>
   );
 };
