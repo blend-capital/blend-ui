@@ -20,6 +20,7 @@ import { OpaqueButton } from '../common/OpaqueButton';
 import { Row } from '../common/Row';
 import { Section, SectionSize } from '../common/Section';
 import { Skeleton } from '../common/Skeleton';
+import { TxFeeSelector } from '../common/TxFeeSelector';
 import { TxOverview } from '../common/TxOverview';
 import { Value } from '../common/Value';
 import { ValueChange } from '../common/ValueChange';
@@ -27,7 +28,7 @@ import { ValueChange } from '../common/ValueChange';
 export const BackstopJoinAnvil = () => {
   const theme = useTheme();
   const { viewType, network } = useSettings();
-  const { walletAddress, txStatus, cometSingleSidedDeposit, cometJoin, txType, isLoading } =
+  const { walletAddress, txStatus, cometSingleSidedDeposit, cometJoin, txType, isLoading, txFee } =
     useWallet();
 
   const BLND_ID = BLND_ASSET.contractId(network.passphrase);
@@ -483,24 +484,34 @@ export const BackstopJoinAnvil = () => {
               display: 'flex',
               flexDirection: 'row',
               justifyContent: 'space-between',
+              alignItems: 'center',
               gap: '12px',
             }}
           >
             <Typography variant="h5" sx={{ color: theme.palette.text.secondary }}>
               {`$${toBalance(inputInUSDC)}`}
             </Typography>
-            <OpaqueButton
-              onClick={isJoin ? handleSubmitJoin : handleSubmitDeposit}
-              palette={theme.palette.backstop}
+            <Box
               sx={{
-                minWidth: '108px',
-                padding: '6px',
-                height: 'max-content',
+                display: 'flex',
+                flexDirection: 'row',
+                justifyContent: 'flex-start',
               }}
-              disabled={isSubmitDisabled}
             >
-              Join
-            </OpaqueButton>
+              <TxFeeSelector />
+              <OpaqueButton
+                onClick={isJoin ? handleSubmitJoin : handleSubmitDeposit}
+                palette={theme.palette.backstop}
+                sx={{
+                  minWidth: '108px',
+                  padding: '6px',
+                  height: 'max-content',
+                }}
+                disabled={isSubmitDisabled}
+              >
+                Join
+              </OpaqueButton>
+            </Box>
           </Box>
         </Box>
         {!isError && (
@@ -523,7 +534,7 @@ export const BackstopJoinAnvil = () => {
                   </>
                 }
                 value={`${toBalance(
-                  BigInt((simResponse as any)?.minResourceFee ?? 0),
+                  BigInt((simResponse as any)?.minResourceFee ?? 0) + BigInt(txFee),
                   decimals
                 )} XLM`}
               />

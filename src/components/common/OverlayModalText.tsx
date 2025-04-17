@@ -43,7 +43,7 @@ export const OverlayModalText: React.FC<OverlayModalTextProps> = ({
         }}
       >
         <CircularProgress size={70} sx={{ color: theme.palette.primary.main }} />
-        <Typography variant="h2" sx={{ margin: '12px' }}>
+        <Typography variant="h2" sx={{ margin: '12px', textAlign: 'center' }}>
           {message}
         </Typography>
         {allowReturn && (

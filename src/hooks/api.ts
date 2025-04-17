@@ -659,3 +659,28 @@ async function getAuctionEventsQuery(
     return { events, latestLedger: resp.latestLedger };
   }
 }
+
+/**
+ * Fetch the fee stats from the RPC server.
+ * @returns Query result with the fee stats.
+ */
+export function useFeeStats(
+  enabled: boolean = true
+): UseQueryResult<rpc.Api.GetFeeStatsResponse, Error> {
+  const { network } = useSettings();
+  return useQuery({
+    staleTime: USER_STALE_TIME,
+    queryKey: ['feeStats'],
+    enabled: enabled,
+    queryFn: async () => {
+      try {
+        let stellarRpc = new rpc.Server(network.rpc, network.opts);
+        const feeStats = await stellarRpc.getFeeStats();
+        return feeStats;
+      } catch (e) {
+        console.error('Error fetching fee stats', e);
+        return undefined;
+      }
+    },
+  });
+}

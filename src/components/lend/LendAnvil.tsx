@@ -36,6 +36,7 @@ import { ReserveComponentProps } from '../common/ReserveComponentProps';
 import { Row } from '../common/Row';
 import { Section, SectionSize } from '../common/Section';
 import { Skeleton } from '../common/Skeleton';
+import { TxFeeSelector } from '../common/TxFeeSelector';
 import { TxOverview } from '../common/TxOverview';
 import { toUSDBalance } from '../common/USDBalance';
 import { Value } from '../common/Value';
@@ -46,7 +47,7 @@ export const LendAnvil: React.FC<ReserveComponentProps> = ({ poolId, assetId }) 
   const theme = useTheme();
   const { viewType } = useSettings();
 
-  const { connected, walletAddress, poolSubmit, txStatus, txType, isLoading } = useWallet();
+  const { connected, walletAddress, poolSubmit, txStatus, txType, isLoading, txFee } = useWallet();
 
   const { data: poolMeta } = usePoolMeta(poolId);
   const { data: pool } = usePool(poolMeta);
@@ -177,7 +178,7 @@ export const LendAnvil: React.FC<ReserveComponentProps> = ({ poolId, assetId }) 
               height: '35px',
               display: 'flex',
               flexDirection: 'row',
-              marginBottom: '12px',
+              marginBottom: '6px',
             }}
           >
             <InputBar
@@ -208,21 +209,31 @@ export const LendAnvil: React.FC<ReserveComponentProps> = ({ poolId, assetId }) 
               </OpaqueButton>
             )}
           </Box>
-          <Box sx={{ marginLeft: '6px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <Box
+            sx={{
+              marginLeft: '6px',
+              display: 'flex',
+              flexDirection: 'row',
+              gap: '12px',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
             <Typography variant="h5" sx={{ color: theme.palette.text.secondary }}>
               {toUSDBalance(assetToBase, Number(toLend ?? 0))}
             </Typography>
-            {viewType === ViewType.MOBILE && (
-              <OpaqueButton
-                onClick={() => handleSubmitTransaction(false)}
-                palette={theme.palette.lend}
-                sx={{ minWidth: '108px', width: '100%', padding: '6px' }}
-                disabled={isSubmitDisabled}
-              >
-                Supply
-              </OpaqueButton>
-            )}
+            <TxFeeSelector />
           </Box>
+          {viewType === ViewType.MOBILE && (
+            <OpaqueButton
+              onClick={() => handleSubmitTransaction(false)}
+              palette={theme.palette.lend}
+              sx={{ minWidth: '108px', width: '100%', padding: '6px', marginTop: '6px' }}
+              disabled={isSubmitDisabled}
+            >
+              Supply
+            </OpaqueButton>
+          )}
         </Box>
         {!isError && (
           <TxOverview>
@@ -236,7 +247,7 @@ export const LendAnvil: React.FC<ReserveComponentProps> = ({ poolId, assetId }) 
                   </>
                 }
                 value={`${toBalance(
-                  BigInt((simResponse as any)?.minResourceFee ?? 0),
+                  BigInt((simResponse as any)?.minResourceFee ?? 0) + BigInt(txFee),
                   decimals
                 )} XLM`}
               />

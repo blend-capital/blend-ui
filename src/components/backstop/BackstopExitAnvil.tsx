@@ -20,6 +20,7 @@ import { OpaqueButton } from '../common/OpaqueButton';
 import { Row } from '../common/Row';
 import { Section, SectionSize } from '../common/Section';
 import { Skeleton } from '../common/Skeleton';
+import { TxFeeSelector } from '../common/TxFeeSelector';
 import { TxOverview } from '../common/TxOverview';
 import { Value } from '../common/Value';
 import { ValueChange } from '../common/ValueChange';
@@ -27,7 +28,8 @@ import { ValueChange } from '../common/ValueChange';
 export const BackstopExitAnvil = () => {
   const theme = useTheme();
   const { viewType, network } = useSettings();
-  const { walletAddress, txStatus, cometExit, txType, isLoading, createTrustlines } = useWallet();
+  const { walletAddress, txStatus, cometExit, txType, isLoading, createTrustlines, txFee } =
+    useWallet();
 
   const BLND_ID = BLND_ASSET.contractId(network.passphrase);
   const USDC_ID = USDC_ASSET.contractId(network.passphrase);
@@ -338,18 +340,27 @@ export const BackstopExitAnvil = () => {
             <Typography variant="h5" sx={{ color: theme.palette.text.secondary }}>
               {`$${toBalance(inputInUSDC)}`}
             </Typography>
-            <OpaqueButton
-              onClick={handleSubmitExit}
-              palette={theme.palette.backstop}
+            <Box
               sx={{
-                minWidth: '108px',
-                padding: '6px',
-                height: 'max-content',
+                display: 'flex',
+                flexDirection: 'row',
+                justifyContent: 'flex-start',
               }}
-              disabled={isSubmitDisabled}
             >
-              Exit
-            </OpaqueButton>
+              <TxFeeSelector />
+              <OpaqueButton
+                onClick={handleSubmitExit}
+                palette={theme.palette.backstop}
+                sx={{
+                  minWidth: '108px',
+                  padding: '6px',
+                  height: 'max-content',
+                }}
+                disabled={isSubmitDisabled}
+              >
+                Exit
+              </OpaqueButton>
+            </Box>
           </Box>
         </Box>
         {!isError && (
@@ -365,7 +376,7 @@ export const BackstopExitAnvil = () => {
                   </>
                 }
                 value={`${toBalance(
-                  BigInt((simResponse as any)?.minResourceFee ?? 0),
+                  BigInt((simResponse as any)?.minResourceFee ?? 0) + BigInt(txFee),
                   decimals
                 )} XLM`}
               />
