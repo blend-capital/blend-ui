@@ -1,0 +1,49 @@
+version: "3.9"
+
+services:
+  blend-ui:
+    container_name: blend-frontend
+    image: node:22-bookworm
+    command: |
+      bash -lc "
+        echo \"DEBUG: user=$(whoami), HOME=$HOME\" &&
+        sed -i '/^PS1=/d' \$HOME/.bashrc &&
+        echo 'PS1=\"\\w>\"' >> \$HOME/.bashrc &&
+        source \$HOME/.bashrc &&
+        apt-get update &&
+        apt-get install -y --no-install-recommends ca-certificates git python3 make g++ libusb-1.0-0-dev libudev-dev &&
+        if [ ! -f /app/package.json ]; then
+          git clone --depth 1 https://github.com/silence48/blend-ui.git /app
+        fi &&
+        cd /app &&
+        npm install &&
+        npm audit fix &&
+        npm run build:mainnet &&
+        npx --yes serve -l 3000 out
+      "
+    environment:
+      - NODE_ENV=production
+      - TARGET_ENV=production
+      - NEXT_PUBLIC_STELLAR_EXPERT_URL=https://stellar.expert/explorer/public
+      - NEXT_PUBLIC_RPC_URL=https://soroban-rpc.creit.tech/
+      - NEXT_PUBLIC_HORIZON_URL=https://horizon.stellar.org
+      - NEXT_PUBLIC_PASSPHRASE=Public Global Stellar Network ; September 2015
+      - NEXT_PUBLIC_WALLET_CONNECT_URL=https://mainnet.blend.capital
+      - NEXT_PUBLIC_WALLET_CONNECT_NAME=Blend Mainnet
+      - NEXT_PUBLIC_BACKSTOP=CAO3AGAMZVRMHITL36EJ2VZQWKYRPWMQAPDQD5YEOF3GIF7T44U4JAL3
+      - NEXT_PUBLIC_BACKSTOP_V2=CAQQR5SWBXKIGZKPBZDH3KM5GQ5GUTPKB7JAFCINLZBC5WXPJKRG3IM7
+      - NEXT_PUBLIC_USDC_ISSUER=GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN
+      - NEXT_PUBLIC_BLND_ISSUER=GDJEHTBE6ZHUXSWFI642DCGLUOECLHPF3KSXHPXTSTJ7E3JF6MQ5EZYY
+      - NEXT_PUBLIC_ORACLE_PRICE_FETCHER=CCBZKB445UZB4QUHQGFXMFZ3T55S6Y2FQDQD5VSOWOUKEBT74G4FOU7A4
+      - NEXT_PUBLIC_BLOCKED_POOLS=CBVOPI6QC6OWVCOEZDCFELAGQNAOHUS4CWOKAVADKQZXVSWR2R5IAKO7
+      - SERVICE_FQDN_BLEND_UI_3000
+
+    expose:
+      - "3000"
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 300s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
