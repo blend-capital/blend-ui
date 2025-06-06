@@ -1,0 +1,80 @@
+providers  = ["node"]
+buildImage = "ghcr.io/railwayapp/nixpacks:ubuntu"
+
+[variables]
+NIXPACKS_DEBIAN       = "true"
+CI                     = "true"
+NODE_ENV               = "production"
+NIXPACKS_NODE_VERSION  = "22"
+NIXPACKS_METADATA      = "node"
+NPM_CONFIG_PRODUCTION  = "false"
+TARGET_ENV             = "production"
+
+NEXT_PUBLIC_STELLAR_EXPERT_URL     = "https://stellar.expert/explorer/public"
+NEXT_PUBLIC_RPC_URL                = "https://soroban-rpc.creit.tech/"
+NEXT_PUBLIC_HORIZON_URL            = "https://horizon.stellar.org"
+NEXT_PUBLIC_PASSPHRASE             = "Public Global Stellar Network ; September 2015"
+NEXT_PUBLIC_WALLET_CONNECT_URL     = "https://mainnet.blend.capital"
+NEXT_PUBLIC_WALLET_CONNECT_NAME    = "Blend Mainnet"
+NEXT_PUBLIC_BACKSTOP               = "CAO3AGAMZVRMHITL36EJ2VZQWKYRPWMQAPDQD5YEOF3GIF7T44U4JAL3"
+NEXT_PUBLIC_BACKSTOP_V2            = "CAQQR5SWBXKIGZKPBZDH3KM5GQ5GUTPKB7JAFCINLZBC5WXPJKRG3IM7"
+NEXT_PUBLIC_USDC_ISSUER            = "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN"
+NEXT_PUBLIC_BLND_ISSUER            = "GDJEHTBE6ZHUXSWFI642DCGLUOECLHPF3KSXHPXTSTJ7E3JF6MQ5EZYY"
+NEXT_PUBLIC_ORACLE_PRICE_FETCHER   = "CCBZKB445UZB4QUHQGFXMFZ3T55S6Y2FQDQ3VSOWOUKEBT74G4FOO7A4"
+NEXT_PUBLIC_BLOCKED_POOLS           = "CBVOPI6QC6OWVCOEZDCFELAGQNAOHUS4CWOKAVADKQZXVSWR2R5IAKO7"
+
+[phases.setup]
+nixPkgs = [
+  "...",              # preserve the Node provider’s own snapshot
+  "nodejs_22",        # Node 22
+  "python311Full",    # if you need to run any Python script at build time
+  "gcc",              # so that node-gyp can compile native code
+  "binutils",         # linker, etc.
+  "pkg-config",       # pkg-config itself
+  "git",
+  "libusb1.dev",      # drops libusb-1.0 headers + .so
+  "systemd.dev"       # drops libudev headers + .so
+]
+
+# You’ll get both headers and the .pc files under ~/.nix-profile/lib/pkgconfig
+nixLibs = [
+  "...",
+  "libusb1.dev",
+  "systemd.dev"
+]
+
+# You do not strictly need libusb-1.0-0-dev or libudev-dev from apt
+# because Nix’s libusb1.dev + systemd.dev supply those headers.
+aptPkgs = [
+  "curl",
+  "wget"
+]
+
+# Just sanity‐check where libudev.h ended up:
+cmds = [
+  "echo '→ Checking for libudev.h in /nix/store…'; find /nix -type f -name libudev.h",
+  "echo '→ Checking for libusb-1.0.pc in /nix'; find /nix -type f -name libusb-1.0.pc",
+  "echo '→ Checking for libudev.pc in /nix'; find /nix -type f -name libudev.pc"
+  
+]
+
+# ───────────────────────────────────────────────────────────────────────────────
+[phases.install.env]
+# We’ll let pkg-config provide the right "-I" flags, so we only need:
+PYTHON = "python3"
+# Point pkg-config at the Nix profile directory where all .pc files live:
+PKG_CONFIG_PATH = "/root/.nix-profile/lib/pkgconfig"
+
+[phases.install]
+dependsOn = ["setup"]
+#cmds = ["echo '→ Starting install phase…' && export PC_DIRS=\"$(find /nix -type f \\( -name \\\"libudev.pc\\\" -o -name \\\"libusb-1.0.pc\\\" \\) -exec dirname {} \\; 2>/dev/null | sort -u | tr '\\n' ':')\" && export PKG_CONFIG_PATH=\"/root/.nix-profile/lib/pkgconfig:${PC_DIRS%:}\" && echo \"PKG_CONFIG_PATH is now → $PKG_CONFIG_PATH\" && INC_DIRS=\"$(find /nix -type f \\( -name \\\"libudev.h\\\" -o -name \\\"libusb-1.0.h\\\" \\) -exec dirname {} \\; 2>/dev/null | sort -u | tr '\\n' ':')\" && export C_INCLUDE_PATH=\"${INC_DIRS%:}\" && echo \"C_INCLUDE_PATH is now → $C_INCLUDE_PATH\" && export CFLAGS=\"$(pkg-config --cflags-only-I libudev libusb-1.0 2>/dev/null)\" && export CXXFLAGS=\"$CFLAGS\" && echo \"CFLAGS is now → $CFLAGS\" && echo \"CXXFLAGS is now → $CXXFLAGS\" && npm install"]
+cmds = ["echo '→ Starting install phase…' && PC_DIRS=\"$(find /nix -type f \\( -name 'libudev.pc' -o -name 'libusb-1.0.pc' \\) -exec dirname {} \\; 2>/dev/null | sort -u | tr '\\n' ':')\" && export PKG_CONFIG_PATH=\"/root/.nix-profile/lib/pkgconfig:${PC_DIRS%:}\" && export CFLAGS=\"$(pkg-config --cflags-only-I libudev libusb-1.0)\" && export LDFLAGS=\"$(pkg-config --libs-only-L libudev libusb-1.0)\" && export LIBRARY_PATH=\"$(pkg-config --libs-only-L libudev libusb-1.0 | sed -e 's/-L//g')\" && echo \"CFLAGS is now → $CFLAGS\" && echo \"LDFLAGS is now → $LDFLAGS\" && echo \"LIBRARY_PATH is now → $LIBRARY_PATH\" && npm install"]
+
+
+# ───────────────────────────────────────────────────────────────────────────────
+[phases.build]
+dependsOn = ["install"]
+cmds = [
+  "npm run build:mainnet"
+]
+# ───────────────────────────────────────────────────────────────────────────────
