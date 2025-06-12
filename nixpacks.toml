@@ -67,7 +67,6 @@ PKG_CONFIG_PATH = "/root/.nix-profile/lib/pkgconfig"
 
 [phases.install]
 dependsOn = ["setup"]
-#cmds = ["echo '→ Starting install phase…' && export PC_DIRS=\"$(find /nix -type f \\( -name \\\"libudev.pc\\\" -o -name \\\"libusb-1.0.pc\\\" \\) -exec dirname {} \\; 2>/dev/null | sort -u | tr '\\n' ':')\" && export PKG_CONFIG_PATH=\"/root/.nix-profile/lib/pkgconfig:${PC_DIRS%:}\" && echo \"PKG_CONFIG_PATH is now → $PKG_CONFIG_PATH\" && INC_DIRS=\"$(find /nix -type f \\( -name \\\"libudev.h\\\" -o -name \\\"libusb-1.0.h\\\" \\) -exec dirname {} \\; 2>/dev/null | sort -u | tr '\\n' ':')\" && export C_INCLUDE_PATH=\"${INC_DIRS%:}\" && echo \"C_INCLUDE_PATH is now → $C_INCLUDE_PATH\" && export CFLAGS=\"$(pkg-config --cflags-only-I libudev libusb-1.0 2>/dev/null)\" && export CXXFLAGS=\"$CFLAGS\" && echo \"CFLAGS is now → $CFLAGS\" && echo \"CXXFLAGS is now → $CXXFLAGS\" && npm install"]
 cmds = ["echo '→ Starting install phase…' && PC_DIRS=\"$(find /nix -type f \\( -name 'libudev.pc' -o -name 'libusb-1.0.pc' \\) -exec dirname {} \\; 2>/dev/null | sort -u | tr '\\n' ':')\" && export PKG_CONFIG_PATH=\"/root/.nix-profile/lib/pkgconfig:${PC_DIRS%:}\" && export CFLAGS=\"$(pkg-config --cflags-only-I libudev libusb-1.0)\" && export LDFLAGS=\"$(pkg-config --libs-only-L libudev libusb-1.0)\" && export LIBRARY_PATH=\"$(pkg-config --libs-only-L libudev libusb-1.0 | sed -e 's/-L//g')\" && echo \"CFLAGS is now → $CFLAGS\" && echo \"LDFLAGS is now → $LDFLAGS\" && echo \"LIBRARY_PATH is now → $LIBRARY_PATH\" && npm install"]
 
 
