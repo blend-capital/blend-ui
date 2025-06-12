@@ -13,11 +13,10 @@ services:
         apt-get update &&
         apt-get install -y --no-install-recommends ca-certificates git python3 make g++ libusb-1.0-0-dev libudev-dev &&
         if [ ! -f /app/package.json ]; then
-          git clone --depth 1 https://github.com/silence48/blend-ui.git /app
+          git clone --depth 1 https://github.com/blend-capital/blend-ui.git /app
         fi &&
         cd /app &&
         npm install &&
-        npm audit fix &&
         npm run build:mainnet &&
         npx --yes serve -l 3000 out
       "
