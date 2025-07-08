@@ -1,5 +1,7 @@
 import {
+  ContractErrorType,
   FixedMath,
+  parseError,
   parseResult,
   PoolContractV1,
   PoolUser,
@@ -9,7 +11,7 @@ import {
   SubmitArgs,
 } from '@blend-capital/blend-sdk';
 import { Box, Typography, useTheme } from '@mui/material';
-import { rpc } from '@stellar/stellar-sdk';
+import { Asset, rpc } from '@stellar/stellar-sdk';
 import Image from 'next/image';
 import { useMemo, useState } from 'react';
 import { useSettings, ViewType } from '../../contexts';
@@ -79,7 +81,30 @@ export const LendAnvil: React.FC<ReserveComponentProps> = ({ poolId, assetId }) 
     stellar_reserve_amount;
 
   const { isSubmitDisabled, isMaxDisabled, reason, disabledType, isError, extraContent } = useMemo(
-    () => getErrorFromSim(toLend, decimals, loading, simResponse, undefined),
+    () =>
+      getErrorFromSim(toLend, decimals, loading, simResponse, () => {
+        // Special case for XLM reserves to clarify balance errors
+        // when supplying exceeds the reserve requirements
+        if (
+          simResponse &&
+          rpc.Api.isSimulationError(simResponse) &&
+          tokenMetadata?.asset?.equals(Asset.native()) &&
+          Number(toLend) < FixedMath.toFloat(tokenBalance ?? BigInt(0), 7)
+        ) {
+          let error = parseError(simResponse);
+          if (error.type === ContractErrorType.BalanceError)
+            return {
+              reason: `BalanceError: Your account requires a minimum balance of ${stellar_reserve_amount.toFixed(
+                2
+              )} XLM in reserve.`,
+              isError: true,
+              isSubmitDisabled: true,
+              isMaxDisabled: false,
+              disabledType: 'error',
+            };
+        }
+        return {};
+      }),
     [freeUserBalanceScaled, toLend, simResponse, loading]
   );
 
