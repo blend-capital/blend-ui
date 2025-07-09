@@ -1,4 +1,5 @@
 import {
+  addReflectorEntries,
   BackstopClaimV1Args,
   BackstopClaimV2Args,
   BackstopContractV1,
@@ -393,7 +394,8 @@ export const WalletProvider = ({ children = null as any }) => {
       const transaction = tx_builder.build();
       const simResponse = await simulateOperation(operation);
       const assembled_tx = rpc.assembleTransaction(transaction, simResponse).build();
-      const signedTx = await sign(assembled_tx.toXDR());
+      const extended_tx = addReflectorEntries(assembled_tx.toXDR());
+      const signedTx = await sign(extended_tx);
       const tx = new Transaction(signedTx, network.passphrase);
       await sendTransaction(tx);
     } catch (e: any) {
