@@ -89,7 +89,7 @@ export async function getTokenMetadataFromTOML(
 
       // no matching entry found
       console.log(
-        `Unable to find currerncy entry for ${assetId} in toml for ${tokenAccountHomeDomain}`
+        `Unable to find currency entry for ${assetId} in toml for ${tokenAccountHomeDomain}`
       );
       return { image: undefined, domain: undefined };
     } catch (e) {
