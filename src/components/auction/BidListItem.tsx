@@ -43,7 +43,7 @@ export const BidListItem: React.FC<BidItemProps> = ({
         }}
       >
         {reserve ? (
-          <TokenHeader reserve={reserve} />
+          <TokenHeader assetId={reserve.assetId} />
         ) : (
           <Box sx={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center' }}>
             <Icon

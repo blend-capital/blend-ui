@@ -63,7 +63,7 @@ export const ReserveDropdown: React.FC<ReserveDropdown> = ({ action, poolId, act
         >
           {activeReserve ? (
             <>
-              <TokenIcon reserve={activeReserve} sx={{ height: '30px', width: '30px' }} />
+              <TokenIcon assetId={activeReserve.assetId} sx={{ height: '30px', width: '30px' }} />
               <Typography variant="h3" sx={{ marginLeft: '12px' }}>
                 {`${capitalizedAction} ${symbol}`}
               </Typography>

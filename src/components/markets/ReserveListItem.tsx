@@ -49,7 +49,7 @@ export const ReserveListItem: React.FC<ReserveListItemProps> = ({
           type: 'alt',
         }}
       >
-        <TokenHeader reserve={reserve} sx={{ width: tableWidth }} />
+        <TokenHeader assetId={reserve.assetId} sx={{ width: tableWidth }} />
         <Box
           sx={{
             width: tableWidth,

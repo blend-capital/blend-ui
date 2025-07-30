@@ -85,7 +85,12 @@ export const LendPositionCard: React.FC<LendPositionCardProps> = ({
         }
       }}
     >
-      <TokenHeader iconSize="24px" hideDomain reserve={reserve} sx={{ width: tableWidth }} />
+      <TokenHeader
+        iconSize="24px"
+        hideDomain
+        assetId={reserve.assetId}
+        sx={{ width: tableWidth }}
+      />
       <Box
         sx={{
           width: tableWidth,

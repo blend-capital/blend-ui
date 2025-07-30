@@ -86,7 +86,7 @@ export const BorrowMarketCard: React.FC<BorrowMarketCardProps> = ({
             },
           }}
         >
-          <TokenHeader reserve={reserve} sx={{ width: tableWidth }} />
+          <TokenHeader assetId={reserve.assetId} sx={{ width: tableWidth }} />
           <Box
             sx={{
               width: tableWidth,
