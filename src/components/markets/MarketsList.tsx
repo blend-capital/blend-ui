@@ -108,6 +108,7 @@ export const MarketsList: React.FC<MarketListProps> = ({ version }) => {
     setMarketsData({});
     setSortedPoolIds([]);
     setCurrentIndex(0);
+    handleFilterChange('selectedAssets', []);
   }, [version]);
 
   // Handle pool data loading

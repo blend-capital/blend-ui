@@ -113,6 +113,15 @@ export const MarketFilter: React.FC<MarketFilterProps> = ({
             backgroundColor: theme.palette.background.paper,
             borderRadius: 6,
             width: '100%',
+            transition: 'box-shadow 0.2s ease-in-out, border 0.2s ease-in-out',
+            border: '1px solid transparent',
+            '&:hover': {
+              border: `1px solid ${theme.palette.grey[700]}`,
+            },
+            '&:focus-within': {
+              boxShadow: `0 0 0 2px ${theme.palette.primary.main}30`,
+              border: `1px solid ${theme.palette.primary.main}`,
+            },
             '& .MuiInputBase-input': {
               padding: '8px 0',
               fontSize: '12px',
@@ -124,6 +133,12 @@ export const MarketFilter: React.FC<MarketFilterProps> = ({
               margin: 0,
             },
             '& .MuiInput-underline:before': {
+              borderBottom: 'none',
+            },
+            '& .MuiInput-underline:after': {
+              borderBottom: 'none',
+            },
+            '& .MuiInput-underline:hover:not(.Mui-disabled):before': {
               borderBottom: 'none',
             },
             '& .MuiInputBase-input::placeholder': {
