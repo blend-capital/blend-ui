@@ -1,24 +1,23 @@
 import { Box, BoxProps, Typography } from '@mui/material';
 
-import { Reserve } from '@blend-capital/blend-sdk';
 import { useTokenMetadata } from '../../hooks/api';
 import { toCompactAddress } from '../../utils/formatter';
 import { TokenIcon } from './TokenIcon';
 
 export interface TokenHeaderProps extends BoxProps {
-  reserve: Reserve;
+  assetId: string;
   hideDomain?: boolean;
   iconSize?: string;
 }
 
 export const TokenHeader: React.FC<TokenHeaderProps> = ({
-  reserve,
+  assetId,
   sx,
   hideDomain,
   iconSize,
   ...props
 }) => {
-  const { data: tokenMetadata } = useTokenMetadata(reserve.assetId);
+  const { data: tokenMetadata } = useTokenMetadata(assetId);
 
   if (tokenMetadata === undefined) {
     return <></>;
@@ -41,7 +40,7 @@ export const TokenHeader: React.FC<TokenHeaderProps> = ({
       {...props}
     >
       <TokenIcon
-        reserve={reserve}
+        assetId={assetId}
         height={iconSize || '32px'}
         width={iconSize || '32px'}
         sx={{ marginRight: '6px' }}

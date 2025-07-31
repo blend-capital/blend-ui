@@ -34,7 +34,7 @@ const ReserveDropdownItem: React.FC<ReserveDropdownItemProps> = ({
         paddingLeft: '6px',
       }}
     >
-      <TokenIcon reserve={reserve} sx={{ height: '30px', width: '30px' }} />
+      <TokenIcon assetId={reserve.assetId} sx={{ height: '30px', width: '30px' }} />
       <Typography variant="h3" sx={{ marginLeft: '12px' }}>
         {`${text} ${symbol}`}
       </Typography>

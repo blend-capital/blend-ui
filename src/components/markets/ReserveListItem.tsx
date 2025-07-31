@@ -6,12 +6,12 @@ import { LinkBox } from '../common/LinkBox';
 import { TokenHeader } from '../common/TokenHeader';
 import { StackedApy } from './StackedApy';
 
-export interface MarketsListItemProps extends BoxProps {
+export interface ReserveListItemProps extends BoxProps {
   poolId: string;
   reserve: Reserve;
 }
 
-export const MarketsListItem: React.FC<MarketsListItemProps> = ({
+export const ReserveListItem: React.FC<ReserveListItemProps> = ({
   poolId,
   reserve,
   sx,
@@ -49,7 +49,7 @@ export const MarketsListItem: React.FC<MarketsListItemProps> = ({
           type: 'alt',
         }}
       >
-        <TokenHeader reserve={reserve} sx={{ width: tableWidth }} />
+        <TokenHeader assetId={reserve.assetId} sx={{ width: tableWidth }} />
         <Box
           sx={{
             width: tableWidth,

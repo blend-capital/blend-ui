@@ -1,6 +1,5 @@
 import React from 'react';
 
-import { Reserve } from '@blend-capital/blend-sdk';
 import { Theme } from '@emotion/react';
 import { SxProps } from '@mui/material';
 import { useTokenMetadata } from '../../hooks/api';
@@ -9,14 +8,14 @@ import { Icon } from './Icon';
 import { LetterIcon } from './LetterIcon';
 
 export interface TokenIconProps {
-  reserve: Reserve;
+  assetId: string;
   height?: string;
   width?: string;
   sx?: SxProps<Theme> | undefined;
 }
-export const TokenIcon: React.FC<TokenIconProps> = ({ reserve, ...props }) => {
-  const { data: stellarTokenMetadata } = useTokenMetadata(reserve.assetId);
-  const symbol = stellarTokenMetadata?.symbol || toCompactAddress(reserve.assetId);
+export const TokenIcon: React.FC<TokenIconProps> = ({ assetId, ...props }) => {
+  const { data: stellarTokenMetadata } = useTokenMetadata(assetId);
+  const symbol = stellarTokenMetadata?.symbol || toCompactAddress(assetId);
 
   if (stellarTokenMetadata?.image) {
     return <Icon src={stellarTokenMetadata.image} alt={symbol} {...props} />;

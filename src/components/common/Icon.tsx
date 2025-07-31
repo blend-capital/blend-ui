@@ -36,7 +36,7 @@ export const Icon: React.FC<IconProps> = ({
         ...sx,
       }}
     >
-      <Image src={src} alt={alt} layout="fill" objectFit="cover" onError={onError} />
+      <Image src={src} alt={alt} fill={true} style={{ objectFit: 'cover' }} onError={onError} />
     </Box>
   );
 };

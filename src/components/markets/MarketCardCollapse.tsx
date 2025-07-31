@@ -19,7 +19,7 @@ import { Section, SectionSize } from '../common/Section';
 import { StackedTextBox } from '../common/StackedTextBox';
 import { TooltipText } from '../common/TooltipText';
 import { PoolIcon } from '../pool/PoolIcon';
-import { MarketsList } from './MarketsList';
+import { ReserveList } from './ReserveList';
 
 export interface MarketCardCollapseProps extends BoxProps {
   pool: Pool;
@@ -304,7 +304,7 @@ export const MarketCardCollapse: React.FC<MarketCardCollapseProps> = ({
           </OpaqueButton>
         </LinkBox>
       </Row>
-      <MarketsList pool={pool} />
+      <ReserveList pool={pool} />
     </Box>
   );
 };

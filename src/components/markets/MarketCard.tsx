@@ -4,8 +4,16 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { Box, Collapse, Typography, useTheme } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useSettings, ViewType } from '../../contexts';
-import { useBackstop, useBackstopPool, usePool, usePoolMeta, usePoolOracle } from '../../hooks/api';
+import {
+  useBackstop,
+  useBackstopPool,
+  usePool,
+  usePoolMeta,
+  usePoolOracle,
+  useTokenMetadataList,
+} from '../../hooks/api';
 import { toBalance } from '../../utils/formatter';
+import { ReserveTokenMetadata } from '../../utils/token';
 import { LinkBox } from '../common/LinkBox';
 import { OpaqueButton } from '../common/OpaqueButton';
 import { PoolComponentProps } from '../common/PoolComponentProps';
@@ -20,7 +28,16 @@ import { MarketCardCollapse } from './MarketCardCollapse';
 
 export interface MarketCardProps extends PoolComponentProps {
   index: number;
-  onLoaded: (index: number) => void;
+  onLoaded: (
+    poolId: string,
+    index: number,
+    poolData: {
+      name: string;
+      poolTvl: number;
+      backstopTvl: number;
+      tokenMetadataList: ReserveTokenMetadata[];
+    }
+  ) => void;
 }
 
 export const MarketCard: React.FC<MarketCardProps> = ({ poolId, index, onLoaded, sx }) => {
@@ -34,21 +51,39 @@ export const MarketCard: React.FC<MarketCardProps> = ({ poolId, index, onLoaded,
   const { data: backstopPool } = useBackstopPool(poolMeta);
   const [expand, setExpand] = useState(false);
   const [rotateArrow, setRotateArrow] = useState(false);
-
   const rotate = rotateArrow ? 'rotate(180deg)' : 'rotate(0)';
 
   const isRegularView = viewType === ViewType.REGULAR;
+
+  const tokenMetadataList = useTokenMetadataList(pool ? Array.from(pool.reserves.keys()) : []);
+
   useEffect(() => {
     if (
       poolMeta !== undefined &&
       pool !== undefined &&
       backstopPool !== undefined &&
-      backstop !== undefined
+      backstop !== undefined &&
+      poolOracle !== undefined
     ) {
-      onLoaded(index);
+      const poolEst = poolOracle ? PoolEstimate.build(pool.reserves, poolOracle) : undefined;
+      const backstopPoolEst = BackstopPoolEst.build(
+        backstop.backstopToken,
+        backstopPool.poolBalance
+      );
+      const processedTokenMetadata: ReserveTokenMetadata[] = tokenMetadataList
+        .filter((result) => result.data !== undefined)
+        .map((result) => result.data!)
+        .filter((data): data is ReserveTokenMetadata => data !== null);
+
+      onLoaded(poolId, index, {
+        name: poolMeta.name,
+        poolTvl: poolEst ? poolEst.totalSupply - poolEst.totalBorrowed : 0,
+        backstopTvl: backstopPoolEst?.totalSpotValue ?? 0,
+        tokenMetadataList: processedTokenMetadata,
+      });
       trackPool(poolMeta);
     }
-  }, [pool, backstopPool, backstop]);
+  }, [pool, backstopPool, backstop, poolOracle, tokenMetadataList]);
 
   if (
     poolMeta === undefined ||
@@ -62,7 +97,6 @@ export const MarketCard: React.FC<MarketCardProps> = ({ poolId, index, onLoaded,
 
   const poolEst = poolOracle ? PoolEstimate.build(pool.reserves, poolOracle) : undefined;
   const backstopPoolEst = BackstopPoolEst.build(backstop.backstopToken, backstopPool.poolBalance);
-
   return (
     <Section width={SectionSize.FULL} sx={{ flexDirection: 'column', marginBottom: '12px', ...sx }}>
       <Box
@@ -148,7 +182,11 @@ export const MarketCard: React.FC<MarketCardProps> = ({ poolId, index, onLoaded,
               {Array.from(pool.reserves.values()).map((reserve, index) => {
                 if (!isRegularView && index > 3) return null; // Limit to 4 icons
                 return (
-                  <TokenIcon key={reserve.assetId} reserve={reserve} sx={{ marginRight: '6px' }} />
+                  <TokenIcon
+                    key={reserve.assetId}
+                    assetId={reserve.assetId}
+                    sx={{ marginRight: '6px' }}
+                  />
                 );
               })}
               {!isRegularView && pool.reserves.size > 4 && (
