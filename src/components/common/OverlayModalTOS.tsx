@@ -36,6 +36,7 @@ export const OverlayModalTOS: React.FC = () => {
             flexWrap: 'wrap',
             flexDirection: 'column',
             backgroundColor: 'rgba(25, 27, 31, 0.9)',
+            overflowY: 'scroll',
           }}
         >
           <Box
@@ -58,7 +59,7 @@ export const OverlayModalTOS: React.FC = () => {
                 flexDirection: 'column',
                 overflowY: 'scroll',
                 maxWidth: '500px',
-                height: '375px',
+                height: 'clamp(150px, 50vh, 400px)',
                 padding: '12px',
                 margin: '12px',
               }}
