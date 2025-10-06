@@ -61,6 +61,7 @@ export interface IWalletContext {
   isLoading: boolean;
   connect: (handleSuccess: (success: boolean) => void) => Promise<void>;
   disconnect: () => void;
+  refresh: (handleSuccess: (success: boolean) => void) => Promise<void>;
   clearLastTx: () => void;
   restore: (sim: rpc.Api.SimulateTransactionRestoreResponse) => Promise<void>;
   poolSubmit: (
@@ -259,6 +260,17 @@ export const WalletProvider = ({ children = null as any }) => {
     }
   }
 
+  /**
+   * Refresh the current wallet address from the active wallet
+   */
+  async function refresh(handleSuccess: (success: boolean) => void) {
+    let result = await handleSetWalletAddress();
+    handleSuccess(result);
+  }
+
+  /**
+   * Disconnect from the user's browser wallet
+   */
   function disconnect() {
     setWalletAddress('');
     setConnected(false);
@@ -785,6 +797,7 @@ export const WalletProvider = ({ children = null as any }) => {
         txInclusionFee,
         connect,
         disconnect,
+        refresh,
         clearLastTx,
         restore,
         poolSubmit,
