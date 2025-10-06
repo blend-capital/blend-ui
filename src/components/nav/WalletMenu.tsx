@@ -68,10 +68,13 @@ export const WalletMenu = () => {
   };
 
   const handleSnackClose = () => {
-    setSnackMessage('');
     setOpenSuccess(false);
     setOpenWarning(false);
     setOpenError(false);
+    // wait for snackbar animation
+    setTimeout(() => {
+      setSnackMessage('');
+    }, 500);
   };
 
   const [anchorElDropdown, setAnchorElDropdown] = React.useState<null | HTMLElement>(null);
@@ -89,8 +92,7 @@ export const WalletMenu = () => {
     refresh(handleRefreshAddress);
   };
 
-  const handleClose = () => {
-    handleSnackClose();
+  const handleCloseMenu = () => {
     setAnchorElDropdown(null);
   };
 
@@ -125,7 +127,7 @@ export const WalletMenu = () => {
         id="wallet-dropdown-menu"
         anchorEl={anchorElDropdown}
         open={openDropdown}
-        onClose={handleClose}
+        onClose={handleCloseMenu}
         MenuListProps={{
           'aria-labelledby': 'wallet-dropdown-button',
           sx: { width: anchorElDropdown && anchorElDropdown.offsetWidth },
@@ -137,7 +139,7 @@ export const WalletMenu = () => {
       >
         <MenuItem
           onClick={() => {
-            handleClose();
+            handleCloseMenu();
             handleCopyAddress();
           }}
         >
@@ -148,7 +150,7 @@ export const WalletMenu = () => {
         </MenuItem>
         <MenuItem
           onClick={() => {
-            handleClose();
+            handleCloseMenu();
             handleClickRefresh();
           }}
         >
@@ -159,7 +161,7 @@ export const WalletMenu = () => {
         </MenuItem>
         <MenuItem
           onClick={() => {
-            handleClose();
+            handleCloseMenu();
             handleDisconnectWallet();
           }}
           sx={{ color: '#E7424C' }}
@@ -181,7 +183,7 @@ export const WalletMenu = () => {
         }}
       >
         <Alert
-          onClose={handleClose}
+          onClose={handleSnackClose}
           severity="success"
           sx={{
             backgroundColor: theme.palette.primary.opaque,
@@ -202,7 +204,7 @@ export const WalletMenu = () => {
         }}
       >
         <Alert
-          onClose={handleClose}
+          onClose={handleSnackClose}
           severity="warning"
           sx={{
             backgroundColor: theme.palette.primary.opaque,
@@ -223,7 +225,7 @@ export const WalletMenu = () => {
         }}
       >
         <Alert
-          onClose={handleClose}
+          onClose={handleSnackClose}
           severity="error"
           sx={{
             backgroundColor: theme.palette.error.opaque,
