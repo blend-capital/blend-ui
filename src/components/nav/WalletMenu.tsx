@@ -1,6 +1,7 @@
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import LogoutIcon from '@mui/icons-material/Logout';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import WalletIcon from '@mui/icons-material/Wallet';
 import {
   Alert,
@@ -21,37 +22,59 @@ import { CustomButton } from '../common/CustomButton';
 
 export const WalletMenu = () => {
   const theme = useTheme();
-  const { connect, disconnect, connected, walletAddress, isLoading } = useWallet();
+  const { connect, disconnect, refresh, connected, walletAddress, isLoading } = useWallet();
 
   // snackbars
-  const [openCon, setOpenCon] = React.useState(false);
-  const [openDis, setOpenDis] = React.useState(false);
-  const [openCopy, setOpenCopy] = React.useState(false);
+  const [snackMessage, setSnackMessage] = React.useState('');
+  const [openSuccess, setOpenSuccess] = React.useState(false);
+  const [openWarning, setOpenWarning] = React.useState(false);
   const [openError, setOpenError] = React.useState(false);
 
   const handleConnectWallet = (successful: boolean) => {
     if (successful) {
-      setOpenCon(true);
+      setSnackMessage('Wallet connected.');
+      setOpenSuccess(true);
     } else {
+      setSnackMessage('Unable to connect wallet.');
       setOpenError(true);
     }
   };
 
   const handleDisconnectWallet = () => {
     disconnect();
-    setOpenDis(true);
+    setSnackMessage('Wallet disconnected.');
+    setOpenSuccess(true);
   };
 
   const handleCopyAddress = () => {
-    copy(walletAddress || '');
-    setOpenCopy(true);
+    if (walletAddress == '' || !connected) {
+      setSnackMessage('Wallet address not found.');
+      setOpenWarning(true);
+    } else {
+      copy(walletAddress || '');
+      setSnackMessage('Wallet address copied to clipboard.');
+      setOpenSuccess(true);
+    }
+  };
+
+  const handleRefreshAddress = (successful: boolean) => {
+    if (successful) {
+      setSnackMessage('Wallet address updated.');
+      setOpenSuccess(true);
+    } else {
+      setSnackMessage('Unable to refresh wallet address.');
+      setOpenError(true);
+    }
   };
 
   const handleSnackClose = () => {
-    setOpenCon(false);
-    setOpenDis(false);
-    setOpenCopy(false);
+    setOpenSuccess(false);
+    setOpenWarning(false);
     setOpenError(false);
+    // wait for snackbar animation
+    setTimeout(() => {
+      setSnackMessage('');
+    }, 500);
   };
 
   const [anchorElDropdown, setAnchorElDropdown] = React.useState<null | HTMLElement>(null);
@@ -65,8 +88,11 @@ export const WalletMenu = () => {
     connect(handleConnectWallet);
   };
 
-  const handleClose = () => {
-    handleSnackClose();
+  const handleClickRefresh = () => {
+    refresh(handleRefreshAddress);
+  };
+
+  const handleCloseMenu = () => {
     setAnchorElDropdown(null);
   };
 
@@ -101,7 +127,7 @@ export const WalletMenu = () => {
         id="wallet-dropdown-menu"
         anchorEl={anchorElDropdown}
         open={openDropdown}
-        onClose={handleClose}
+        onClose={handleCloseMenu}
         MenuListProps={{
           'aria-labelledby': 'wallet-dropdown-button',
           sx: { width: anchorElDropdown && anchorElDropdown.offsetWidth },
@@ -113,7 +139,7 @@ export const WalletMenu = () => {
       >
         <MenuItem
           onClick={() => {
-            handleClose();
+            handleCloseMenu();
             handleCopyAddress();
           }}
         >
@@ -124,7 +150,18 @@ export const WalletMenu = () => {
         </MenuItem>
         <MenuItem
           onClick={() => {
-            handleClose();
+            handleCloseMenu();
+            handleClickRefresh();
+          }}
+        >
+          <ListItemText>Refresh address</ListItemText>
+          <ListItemIcon>
+            <RefreshIcon />
+          </ListItemIcon>
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            handleCloseMenu();
             handleDisconnectWallet();
           }}
           sx={{ color: '#E7424C' }}
@@ -137,7 +174,7 @@ export const WalletMenu = () => {
       </Menu>
 
       <Snackbar
-        open={openCon}
+        open={openSuccess}
         autoHideDuration={4000}
         onClose={handleSnackClose}
         anchorOrigin={{
@@ -146,7 +183,7 @@ export const WalletMenu = () => {
         }}
       >
         <Alert
-          onClose={handleClose}
+          onClose={handleSnackClose}
           severity="success"
           sx={{
             backgroundColor: theme.palette.primary.opaque,
@@ -154,11 +191,11 @@ export const WalletMenu = () => {
             width: '100%',
           }}
         >
-          Wallet connected.
+          {snackMessage}
         </Alert>
       </Snackbar>
       <Snackbar
-        open={openDis}
+        open={openWarning}
         autoHideDuration={4000}
         onClose={handleSnackClose}
         anchorOrigin={{
@@ -167,36 +204,15 @@ export const WalletMenu = () => {
         }}
       >
         <Alert
-          onClose={handleClose}
-          severity="success"
+          onClose={handleSnackClose}
+          severity="warning"
           sx={{
             backgroundColor: theme.palette.primary.opaque,
             alignItems: 'center',
             width: '100%',
           }}
         >
-          Wallet disconnected.
-        </Alert>
-      </Snackbar>
-      <Snackbar
-        open={openCopy}
-        autoHideDuration={4000}
-        onClose={handleSnackClose}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'right',
-        }}
-      >
-        <Alert
-          onClose={handleClose}
-          severity="success"
-          sx={{
-            backgroundColor: theme.palette.primary.opaque,
-            alignItems: 'center',
-            width: '100%',
-          }}
-        >
-          Wallet address copied to clipboard.
+          {snackMessage}
         </Alert>
       </Snackbar>
       <Snackbar
@@ -209,7 +225,7 @@ export const WalletMenu = () => {
         }}
       >
         <Alert
-          onClose={handleClose}
+          onClose={handleSnackClose}
           severity="error"
           sx={{
             backgroundColor: theme.palette.error.opaque,
@@ -217,7 +233,7 @@ export const WalletMenu = () => {
             width: '100%',
           }}
         >
-          Unable to connect wallet.
+          {snackMessage}
         </Alert>
       </Snackbar>
     </>
