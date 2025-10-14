@@ -17,7 +17,7 @@ import { useSettings, ViewType } from '../../contexts';
 import { TxStatus, TxType, useWallet } from '../../contexts/wallet';
 import { useBackstop, usePoolOracle, usePoolUser } from '../../hooks/api';
 import { RPC_DEBOUNCE_DELAY, useDebouncedState } from '../../hooks/debounce';
-import { calculateAuctionOracleProfit } from '../../utils/auction';
+import { estAuction } from '../../utils/auction';
 import { toBalance, toPercentage } from '../../utils/formatter';
 import { scaleInputToBigInt } from '../../utils/scval';
 import { getErrorFromSim } from '../../utils/txSim';
@@ -71,38 +71,31 @@ export const OngoingAuctionCardCollapse: React.FC<OngoingAuctionCardExpandedProp
   const positionEstimate =
     poolOracle && poolUser && PositionsEstimate.build(pool, poolOracle, poolUser.positions);
 
-  const { scaledAuction, auctionValue, auctionToFill, auctionToFillValue, newPositionEstimate } =
+  const { auctionEstimate, auctionToFill, auctionToFillEstimate, newPositionEstimate } =
     useMemo(() => {
       const scaledAuction = auction.scale(currLedger + 1)[0];
       const auctionToFill = auction.scale(currLedger + 1, Number(fillPercent))[0];
-      const auctionValue =
-        poolOracle &&
-        backstop &&
-        calculateAuctionOracleProfit(
-          scaledAuction.data,
-          scaledAuction.type,
-          pool,
-          poolOracle,
-          backstop.backstopToken
-        );
-      const auctionToFillValue =
-        poolOracle &&
-        backstop &&
-        calculateAuctionOracleProfit(
-          auctionToFill.data,
-          auctionToFill.type,
-          pool,
-          poolOracle,
-          backstop.backstopToken
-        );
+      const auctionEstimate = estAuction(
+        scaledAuction.data,
+        scaledAuction.type,
+        pool,
+        poolOracle,
+        backstop?.backstopToken.lpTokenPrice
+      );
+      const auctionToFillEstimate = estAuction(
+        auctionToFill.data,
+        auctionToFill.type,
+        pool,
+        poolOracle,
+        backstop?.backstopToken.lpTokenPrice
+      );
       const newPositionEstimate =
         poolOracle && parsedSimResult && PositionsEstimate.build(pool, poolOracle, parsedSimResult);
 
       return {
-        scaledAuction,
-        auctionValue,
+        auctionEstimate,
         auctionToFill,
-        auctionToFillValue,
+        auctionToFillEstimate,
         newPositionEstimate,
       };
     }, [auction, simResponse, currLedger, poolOracle, backstop, pool, parsedSimResult]);
@@ -170,12 +163,13 @@ export const OngoingAuctionCardCollapse: React.FC<OngoingAuctionCardExpandedProp
     }
     setLoadingEstimate(false);
   });
+
   return (
     <Section width={SectionSize.FULL} sx={{ flexDirection: 'column', marginBottom: '12px', ...sx }}>
       <LotList
         pool={pool}
-        lot={scaledAuction.data.lot}
-        lotValue={auctionValue?.lot ?? new Map()}
+        lot={auctionEstimate?.lot ?? new Map()}
+        lotValue={auctionEstimate?.lotValue ?? new Map()}
         type={
           auction.type === AuctionType.Interest || auction.type === AuctionType.BadDebt
             ? 'Underlying'
@@ -185,8 +179,8 @@ export const OngoingAuctionCardCollapse: React.FC<OngoingAuctionCardExpandedProp
       <DividerSection />
       <BidList
         pool={pool}
-        bid={scaledAuction.data.bid}
-        bidValue={auctionValue?.bid ?? new Map()}
+        bid={auctionEstimate?.bid ?? new Map()}
+        bidValue={auctionEstimate?.bidValue ?? new Map()}
         type={auction.type === AuctionType.Interest ? 'Underlying' : 'Liability'}
       />
       <Box
@@ -261,11 +255,11 @@ export const OngoingAuctionCardCollapse: React.FC<OngoingAuctionCardExpandedProp
       <DividerSection />
       {!isError && parsedSimResult && (
         <TxOverview>
-          {auctionToFillValue && (
+          {auctionToFillEstimate && (
             <Value
               title="Oracle estimated profit"
               value={`${toBalance(
-                auctionToFillValue.totalLotValue - auctionToFillValue.totalBidValue,
+                auctionToFillEstimate.totalLotValue - auctionToFillEstimate.totalBidValue,
                 3
               )}`}
             />

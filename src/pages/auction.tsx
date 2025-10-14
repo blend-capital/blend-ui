@@ -20,6 +20,7 @@ import { Section, SectionSize } from '../components/common/Section';
 import { Skeleton } from '../components/common/Skeleton';
 import { NotPoolBar } from '../components/pool/NotPoolBar';
 import { PoolExploreBar } from '../components/pool/PoolExploreBar';
+import { PoolOracleError } from '../components/pool/PoolOracleErrorBanner';
 import { TxStatus, useWallet } from '../contexts/wallet';
 import {
   useAuctionEventsLongQuery,
@@ -27,6 +28,7 @@ import {
   useBackstop,
   usePool,
   usePoolMeta,
+  usePoolOracle,
 } from '../hooks/api';
 import { NOT_BLEND_POOL_ERROR_MESSAGE } from '../hooks/types';
 
@@ -39,6 +41,7 @@ const Auction: NextPage = () => {
 
   const { data: poolMeta, error: poolError } = usePoolMeta(safePoolId);
   const { data: pool, isError: isPoolLoadingError } = usePool(poolMeta);
+  const { isError: isOracleError } = usePoolOracle(pool);
   const { data: backstop } = useBackstop(poolMeta?.version);
   let { data: pastEvents, isError: isLongEventsError } = useAuctionEventsLongQuery(poolMeta);
   const {
@@ -84,6 +87,11 @@ const Auction: NextPage = () => {
         <PoolExploreBar poolId={safePoolId} />
       </Row>
       <Divider />
+      {isOracleError && (
+        <Row>
+          <PoolOracleError />
+        </Row>
+      )}
       {hasData ? (
         hasAuctions ? (
           <>

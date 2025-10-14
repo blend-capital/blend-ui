@@ -45,8 +45,8 @@ export const BidBalanceChange: React.FC<BidBalanceChangeProps> = ({
         return (
           <ValueChange
             title="Lp Token Balance"
-            curValue={`${toBalance(lpTokenBalance, 7)}%`}
-            newValue={`${toBalance(lpTokenBalance - bidAmount, 7)}%`}
+            curValue={`${toBalance(lpTokenBalance, 7)}`}
+            newValue={`${toBalance(lpTokenBalance - bidAmount, 7)}`}
           />
         );
       }

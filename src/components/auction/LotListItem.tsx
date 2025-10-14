@@ -82,7 +82,7 @@ export const LotListItem: React.FC<LotItemProps> = ({
         <Typography variant="body1">
           {`${toBalance(amount, reserve?.config.decimals ?? 7)}`}
         </Typography>
-        {oracleValue !== undefined && (
+        {oracleValue !== undefined && oracleValue !== 0 && (
           <Typography variant="body2" color="text.secondary">
             {`$${toBalance(oracleValue, 2)}`}
           </Typography>
