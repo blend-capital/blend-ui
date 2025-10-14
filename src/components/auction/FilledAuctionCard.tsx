@@ -3,7 +3,7 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { Box, Typography, useTheme } from '@mui/material';
 import { useMemo } from 'react';
 import { useBackstop, usePoolOracle } from '../../hooks/api';
-import { calculateAuctionOracleProfit } from '../../utils/auction';
+import { estAuction } from '../../utils/auction';
 import { toCompactAddress } from '../../utils/formatter';
 import { DividerSection } from '../common/DividerSection';
 import { PoolComponentProps } from '../common/PoolComponentProps';
@@ -24,22 +24,20 @@ export const FilledAuctionCard: React.FC<FilledAuctionCardProps> = ({ pool, auct
   const theme = useTheme();
   const { data: poolOracle } = usePoolOracle(pool);
   const { data: backstop } = useBackstop(pool.version);
-  const { auctionValue } = useMemo(() => {
-    const auctionValue =
-      poolOracle &&
-      backstop &&
-      calculateAuctionOracleProfit(
-        auction.data,
-        auction.type,
-        pool,
-        poolOracle,
-        backstop.backstopToken
-      );
 
+  const { auctionEstimate } = useMemo(() => {
+    const auctionEstimate = estAuction(
+      auction.data,
+      auction.type,
+      pool,
+      poolOracle,
+      backstop?.backstopToken.lpTokenPrice
+    );
     return {
-      auctionValue,
+      auctionEstimate,
     };
-  }, [auction]);
+  }, [auction, poolOracle, backstop, pool]);
+
   return (
     <Section width={SectionSize.FULL} sx={{ flexDirection: 'column', marginBottom: '12px', ...sx }}>
       <Box
@@ -125,8 +123,8 @@ export const FilledAuctionCard: React.FC<FilledAuctionCardProps> = ({ pool, auct
       </Box>
       <LotList
         pool={pool}
-        lot={auction.data.lot}
-        lotValue={auctionValue?.lot ?? new Map()}
+        lot={auctionEstimate?.lot ?? new Map()}
+        lotValue={auctionEstimate?.lotValue ?? new Map()}
         type={
           auction.type === AuctionType.Interest || auction.type === AuctionType.BadDebt
             ? 'Underlying'
@@ -136,8 +134,8 @@ export const FilledAuctionCard: React.FC<FilledAuctionCardProps> = ({ pool, auct
       <DividerSection />
       <BidList
         pool={pool}
-        bid={auction.data.bid}
-        bidValue={auctionValue?.bid ?? new Map()}
+        bid={auctionEstimate?.bid ?? new Map()}
+        bidValue={auctionEstimate?.bidValue ?? new Map()}
         type={auction.type === AuctionType.Interest ? 'Underlying' : 'Liability'}
       />
 
