@@ -28,6 +28,7 @@ import {
 } from '@creit.tech/stellar-wallets-kit/index';
 import { LedgerModule } from '@creit.tech/stellar-wallets-kit/modules/ledger.module';
 import {
+  WALLET_CONNECT_ID,
   WalletConnectAllowedMethods,
   WalletConnectModule,
 } from '@creit.tech/stellar-wallets-kit/modules/walletconnect.module';
@@ -141,17 +142,14 @@ export interface InclusionFee {
   fee: string;
 }
 
-const walletKit: StellarWalletsKit = new StellarWalletsKit({
-  network: (process.env.NEXT_PUBLIC_PASSPHRASE ?? WalletNetwork.TESTNET) as WalletNetwork,
-  selectedWalletId: XBULL_ID,
-  modules: [
-    new xBullModule(),
-    new FreighterModule(),
-    new LobstrModule(),
-    new AlbedoModule(),
-    new HanaModule(),
-    new LedgerModule(),
-    new WalletConnectModule({
+// Lazy-initialized wallet kit singletons. These are only created in the browser
+// to avoid running wallet kit constructors during Next.js static page generation.
+let walletConnectModule: WalletConnectModule | undefined;
+let walletKit: StellarWalletsKit | undefined;
+
+function getWalletKit(): StellarWalletsKit {
+  if (!walletKit) {
+    walletConnectModule = new WalletConnectModule({
       url: process.env.NEXT_PUBLIC_WALLET_CONNECT_URL ?? '',
       projectId: 'a0fd1483122937b5cabbe0d85fa9c34e',
       method: WalletConnectAllowedMethods.SIGN,
@@ -161,14 +159,29 @@ const walletKit: StellarWalletsKit = new StellarWalletsKit({
         'https://docs.blend.capital/~gitbook/image?url=https%3A%2F%2F3627113658-files.gitbook.io%2F%7E%2Ffiles%2Fv0%2Fb%2Fgitbook-x-prod.appspot.com%2Fo%2Fspaces%252FlsteMPgIzWJ2y9ruiTJy%252Fuploads%252FVsvCoCALpHWAw8LpU12e%252FBlend%2520Logo%25403x.png%3Falt%3Dmedia%26token%3De8c06118-43b7-4ddd-9580-6c0fc47ce971&width=768&dpr=2&quality=100&sign=f4bb7bc2&sv=1',
       ],
       network: (process.env.NEXT_PUBLIC_PASSPHRASE ?? WalletNetwork.TESTNET) as WalletNetwork,
-    }),
-    new HotWalletModule(),
-  ],
-});
+    });
+
+    walletKit = new StellarWalletsKit({
+      network: (process.env.NEXT_PUBLIC_PASSPHRASE ?? WalletNetwork.TESTNET) as WalletNetwork,
+      selectedWalletId: XBULL_ID,
+      modules: [
+        new xBullModule(),
+        new FreighterModule(),
+        new LobstrModule(),
+        new AlbedoModule(),
+        new HanaModule(),
+        new LedgerModule(),
+        walletConnectModule,
+        new HotWalletModule(),
+      ],
+    });
+  }
+  return walletKit;
+}
 
 const WalletContext = React.createContext<IWalletContext | undefined>(undefined);
 
-export const WalletProvider = ({ children = null as any }) => {
+export const WalletProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
   const { network } = useSettings();
 
   const { cleanWalletCache, cleanBackstopCache, cleanPoolCache, cleanBackstopPoolCache } =
@@ -192,17 +205,25 @@ export const WalletProvider = ({ children = null as any }) => {
   const [walletAddress, setWalletAddress] = useState<string>('');
 
   useEffect(() => {
-    if (
-      !connected &&
-      autoConnect !== undefined &&
-      autoConnect !== 'false' &&
-      autoConnect !== 'wallet_connect'
-    ) {
-      // @dev: timeout ensures chrome has the ability to load extensions
-      setTimeout(() => {
-        walletKit.setWallet(autoConnect);
-        handleSetWalletAddress();
-      }, 750);
+    // @dev: timeout ensures chrome has the ability to load extensions
+    // if the wallet is already connected, this will be a no-op
+    if (!connected) {
+      if (
+        autoConnect !== undefined &&
+        autoConnect !== 'false' &&
+        autoConnect !== WALLET_CONNECT_ID
+      ) {
+        // attempt to auto-connect wallet
+        setTimeout(() => {
+          getWalletKit().setWallet(autoConnect);
+          handleSetWalletAddress();
+        }, 750);
+      } else {
+        // initialize wallet kit
+        setTimeout(() => {
+          getWalletKit();
+        }, 750);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoConnect]);
@@ -224,7 +245,7 @@ export const WalletProvider = ({ children = null as any }) => {
    */
   async function handleSetWalletAddress(): Promise<boolean> {
     try {
-      const { address: publicKey } = await walletKit.getAddress();
+      const { address: publicKey } = await getWalletKit().getAddress();
       if (publicKey === '' || publicKey == undefined) {
         console.error('Unable to load wallet key: ', publicKey);
         return false;
@@ -244,9 +265,17 @@ export const WalletProvider = ({ children = null as any }) => {
   async function connect(handleSuccess: (success: boolean) => void) {
     try {
       setLoading(true);
-      await walletKit.openModal({
+      await getWalletKit().openModal({
         onWalletSelected: async (option: ISupportedWallet) => {
-          walletKit.setWallet(option.id);
+          // if creating a new wallet connect session, ensure any existing sessions are cleared first
+          if (option.id === WALLET_CONNECT_ID && walletConnectModule !== undefined) {
+            try {
+              await walletConnectModule.disconnect();
+            } catch (e) {
+              console.error('Error disconnecting existing WalletConnect sessions:', e);
+            }
+          }
+          getWalletKit().setWallet(option.id);
           let result = await handleSetWalletAddress();
           setAutoConnect(option.id);
           handleSuccess(result);
@@ -271,7 +300,19 @@ export const WalletProvider = ({ children = null as any }) => {
   /**
    * Disconnect from the user's browser wallet
    */
-  function disconnect() {
+  async function disconnect() {
+    if (autoConnect === WALLET_CONNECT_ID && walletConnectModule !== undefined) {
+      try {
+        await walletConnectModule.disconnect();
+      } catch (e) {
+        console.error('Error disconnecting WalletConnect session:', e);
+      }
+    }
+    try {
+      await getWalletKit().disconnect();
+    } catch (e) {
+      console.error('Error disconnecting wallet session from wallet kit:', e);
+    }
     setWalletAddress('');
     setConnected(false);
     setAutoConnect('false');
@@ -288,7 +329,7 @@ export const WalletProvider = ({ children = null as any }) => {
     if (connected) {
       setTxStatus(TxStatus.SIGNING);
       try {
-        let { signedTxXdr } = await walletKit.signTransaction(xdr, {
+        let { signedTxXdr } = await getWalletKit().signTransaction(xdr, {
           address: walletAddress,
           networkPassphrase: network.passphrase as WalletNetwork,
         });
@@ -299,6 +340,11 @@ export const WalletProvider = ({ children = null as any }) => {
           setTxFailure('Transaction rejected by wallet.');
         } else if (typeof e === 'string') {
           setTxFailure(e);
+        } else if (e instanceof Error || e?.message) {
+          const message: string = e.message || 'Unknown error';
+          setTxFailure(message);
+        } else {
+          setTxFailure('An unexpected error occurred while signing the transaction.');
         }
 
         setTxStatus(TxStatus.FAIL);

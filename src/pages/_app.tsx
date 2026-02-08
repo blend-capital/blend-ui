@@ -4,12 +4,17 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AppProps } from 'next/app';
+import dynamic from 'next/dynamic';
 import Head from 'next/head';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { SettingsProvider } from '../contexts';
-import { WalletProvider } from '../contexts/wallet';
 import DefaultLayout from '../layouts/DefaultLayout';
 import theme from '../theme';
+
+const WalletProvider = dynamic<React.PropsWithChildren>(
+  () => import('../contexts/wallet').then((mod) => mod.WalletProvider),
+  { ssr: false }
+);
 
 export default function MyApp(props: AppProps) {
   const { Component, pageProps } = props;
