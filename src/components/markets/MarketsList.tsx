@@ -141,9 +141,12 @@ export const MarketsList: React.FC<MarketListProps> = ({ version }) => {
     });
 
     // Update index for progressive loading
-    if (index >= currentIndex) {
-      setCurrentIndex(Math.min(currentIndex + 1, safeRewardZone.length));
-    }
+    setCurrentIndex((prev) => {
+      if (index >= prev) {
+        return Math.min(prev + 1, safeRewardZone.length);
+      }
+      return prev;
+    });
   }
 
   // Handle filter changes from MarketFilter component

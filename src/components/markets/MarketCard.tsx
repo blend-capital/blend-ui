@@ -24,6 +24,7 @@ import { StackedTextHLBox } from '../common/StackedTextHLBox';
 import { TokenIcon } from '../common/TokenIcon';
 import { PoolHeader } from '../pool/PoolHeader';
 import { PoolHealthBanner } from '../pool/PoolHealthBanner';
+import { PoolLoadError } from '../pool/PoolLoadErrorBanner';
 import { MarketCardCollapse } from './MarketCardCollapse';
 
 export interface MarketCardProps extends PoolComponentProps {
@@ -44,10 +45,10 @@ export const MarketCard: React.FC<MarketCardProps> = ({ poolId, index, onLoaded,
   const theme = useTheme();
   const { trackPool, viewType } = useSettings();
 
-  const { data: poolMeta } = usePoolMeta(poolId);
+  const { data: poolMeta, error: poolMetaError, isError: isPoolMetaError } = usePoolMeta(poolId);
   const { data: backstop } = useBackstop(poolMeta?.version);
-  const { data: pool } = usePool(poolMeta);
-  const { data: poolOracle } = usePoolOracle(pool);
+  const { data: pool, isError: isPoolError } = usePool(poolMeta);
+  const { data: poolOracle, isError: isOracleError } = usePoolOracle(pool);
   const { data: backstopPool } = useBackstopPool(poolMeta);
   const [expand, setExpand] = useState(false);
   const [rotateArrow, setRotateArrow] = useState(false);
@@ -58,14 +59,37 @@ export const MarketCard: React.FC<MarketCardProps> = ({ poolId, index, onLoaded,
   const tokenMetadataList = useTokenMetadataList(pool ? Array.from(pool.reserves.keys()) : []);
 
   useEffect(() => {
+    // Handle poolMeta errors — call onLoaded so progressive loading doesn't stall
+    if (isPoolMetaError) {
+      onLoaded(poolId, index, {
+        name: '',
+        poolTvl: 0,
+        backstopTvl: 0,
+        tokenMetadataList: [],
+      });
+      return;
+    }
+
+    // Handle pool load errors when poolMeta is available
+    if (poolMeta !== undefined && isPoolError) {
+      onLoaded(poolId, index, {
+        name: poolMeta.name,
+        poolTvl: 0,
+        backstopTvl: 0,
+        tokenMetadataList: [],
+      });
+      trackPool(poolMeta);
+      return;
+    }
+
+    // Handle oracle errors — render card with unknown TVL but real backstop data
     if (
       poolMeta !== undefined &&
       pool !== undefined &&
       backstopPool !== undefined &&
       backstop !== undefined &&
-      poolOracle !== undefined
+      isOracleError
     ) {
-      const poolEst = poolOracle ? PoolEstimate.build(pool.reserves, poolOracle) : undefined;
       const backstopPoolEst = BackstopPoolEst.build(
         backstop.backstopToken,
         backstopPool.poolBalance
@@ -77,18 +101,86 @@ export const MarketCard: React.FC<MarketCardProps> = ({ poolId, index, onLoaded,
 
       onLoaded(poolId, index, {
         name: poolMeta.name,
-        poolTvl: poolEst ? poolEst.totalSupply - poolEst.totalBorrowed : 0,
+        poolTvl: 0,
+        backstopTvl: backstopPoolEst?.totalSpotValue ?? 0,
+        tokenMetadataList: processedTokenMetadata,
+      });
+      trackPool(poolMeta);
+      return;
+    }
+
+    // All data loaded successfully
+    if (
+      poolMeta !== undefined &&
+      pool !== undefined &&
+      backstopPool !== undefined &&
+      backstop !== undefined &&
+      poolOracle !== undefined
+    ) {
+      const poolEst = PoolEstimate.build(pool.reserves, poolOracle);
+      const backstopPoolEst = BackstopPoolEst.build(
+        backstop.backstopToken,
+        backstopPool.poolBalance
+      );
+      const processedTokenMetadata: ReserveTokenMetadata[] = tokenMetadataList
+        .filter((result) => result.data !== undefined)
+        .map((result) => result.data!)
+        .filter((data): data is ReserveTokenMetadata => data !== null);
+
+      onLoaded(poolId, index, {
+        name: poolMeta.name,
+        poolTvl: poolEst.totalSupply - poolEst.totalBorrowed,
         backstopTvl: backstopPoolEst?.totalSpotValue ?? 0,
         tokenMetadataList: processedTokenMetadata,
       });
       trackPool(poolMeta);
     }
-  }, [pool, backstopPool, backstop, poolOracle, tokenMetadataList]);
+  }, [
+    pool,
+    backstopPool,
+    backstop,
+    poolOracle,
+    tokenMetadataList,
+    isOracleError,
+    isPoolError,
+    isPoolMetaError,
+  ]);
 
+  // poolMeta failed to load (other error) — show error banner with contract ID
+  if (isPoolMetaError) {
+    return (
+      <Section
+        width={SectionSize.FULL}
+        sx={{ flexDirection: 'column', marginBottom: '12px', ...sx }}
+      >
+        <PoolLoadError poolId={poolId} />
+      </Section>
+    );
+  }
+
+  // Pool data failed to load but poolMeta is available — show header + error banner
+  if (poolMeta !== undefined && isPoolError) {
+    return (
+      <Section
+        width={SectionSize.FULL}
+        sx={{ flexDirection: 'column', marginBottom: '12px', ...sx }}
+      >
+        <Row>
+          <PoolHeader
+            name={poolMeta.name}
+            version={poolMeta.version}
+            sx={{ margin: '6px', padding: '6px' }}
+          />
+        </Row>
+        <PoolLoadError poolId={poolId} poolName={poolMeta.name} />
+      </Section>
+    );
+  }
+
+  // Still loading — no errors yet, data not ready
   if (
     poolMeta === undefined ||
     pool === undefined ||
-    poolOracle === undefined ||
     backstopPool === undefined ||
     backstop === undefined
   ) {

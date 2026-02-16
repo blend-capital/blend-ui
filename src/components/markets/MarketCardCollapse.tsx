@@ -23,7 +23,7 @@ import { ReserveList } from './ReserveList';
 
 export interface MarketCardCollapseProps extends BoxProps {
   pool: Pool;
-  oracle: PoolOracle;
+  oracle: PoolOracle | undefined;
   poolEst: PoolEstimate | undefined;
   backstopPool: BackstopPool;
   backstopPoolEst: BackstopPoolEst;
@@ -228,7 +228,7 @@ export const MarketCardCollapse: React.FC<MarketCardCollapseProps> = ({
               flexDirection: 'row',
             }}
           >
-            {`$${toBalance(pool.metadata.minCollateral, oracle.decimals)}`}
+            {`$${toBalance(pool.metadata.minCollateral, oracle?.decimals)}`}
           </Typography>
         </Section>
       </Row>
