@@ -453,6 +453,7 @@ export const WalletProvider: React.FC<React.PropsWithChildren> = ({ children }) 
       const simResponse = await simulateOperation(operation);
       const assembled_tx = rpc.assembleTransaction(transaction, simResponse).build();
       const extended_tx = addReflectorEntries(assembled_tx.toXDR());
+      console.log('Sending transaction to wallet: ', extended_tx);
       const signedTx = await sign(extended_tx);
       const tx = new Transaction(signedTx, network.passphrase);
       await sendTransaction(tx);

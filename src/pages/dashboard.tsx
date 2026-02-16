@@ -31,8 +31,12 @@ const Dashboard: NextPage = () => {
   const { poolId } = router.query;
   const safePoolId = typeof poolId == 'string' && /^[0-9A-Z]{56}$/.test(poolId) ? poolId : '';
 
-  const { data: poolMeta, error: poolError } = usePoolMeta(safePoolId);
-  const { data: pool } = usePool(poolMeta);
+  const {
+    data: poolMeta,
+    error: poolMetaError,
+    isError: isPoolMetaError,
+  } = usePoolMeta(safePoolId);
+  const { data: pool, isError: isPoolError } = usePool(poolMeta);
   const { data: poolOracle, isError: isOracleError } = usePoolOracle(pool);
   const { data: userPoolData } = usePoolUser(pool);
 
@@ -53,7 +57,7 @@ const Dashboard: NextPage = () => {
     }
   };
 
-  if (poolError?.message === NOT_BLEND_POOL_ERROR_MESSAGE) {
+  if (poolMetaError?.message === NOT_BLEND_POOL_ERROR_MESSAGE) {
     return <NotPoolBar poolId={safePoolId} />;
   }
 

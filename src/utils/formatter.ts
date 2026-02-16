@@ -23,7 +23,6 @@ export function toBalance(
   } else if (typeof amount === 'number') {
     numValue = amount;
   } else {
-    console.error('Invalid toBalance input. Must provide decimals if amount is a bigint.');
     return '--';
   }
 
