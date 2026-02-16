@@ -30,15 +30,22 @@ export async function getTokenMetadataFromTOML(
     const assetIssuer = tokenMetadata.asset.issuer;
     const assetId = `${assetCode}:${assetIssuer}`;
 
+    // Special case for Circle's TOML. Browsers get blocked by CORS policy.
     if (
       assetCode === 'EURC' &&
       assetIssuer === 'GDHU6WRG4IEQXM5NZ4BMPKOXHW76MZM4Y2IEMFDVXBSDP6SJY4ITNPP2'
     ) {
-      // Circle's TOML for EURC is blocked by CORS, so we can't load it
-      // just short circuit the results here
       return {
-        domain: 'circle.io',
+        domain: 'circle.com',
         image: `https://www.circle.com/eurc-icon`,
+      };
+    } else if (
+      assetCode === 'USDC' &&
+      assetIssuer === 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN'
+    ) {
+      return {
+        domain: 'circle.com',
+        image: `https://www.circle.com/usdc-icon`,
       };
     }
     try {
