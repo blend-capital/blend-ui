@@ -2,7 +2,6 @@ import { Version, parseResult } from '@blend-capital/blend-sdk';
 import { LoopOutlined } from '@mui/icons-material';
 import { Box, Typography, useTheme } from '@mui/material';
 import { rpc, scValToBigInt, xdr } from '@stellar/stellar-sdk';
-import Image from 'next/image';
 import { useMemo, useState } from 'react';
 import { ViewType, useSettings } from '../../contexts';
 import { TxStatus, TxType, useWallet } from '../../contexts/wallet';
@@ -21,9 +20,6 @@ import { Row } from '../common/Row';
 import { Section, SectionSize } from '../common/Section';
 import { Skeleton } from '../common/Skeleton';
 import { TxFeeSelector } from '../common/TxFeeSelector';
-import { TxOverview } from '../common/TxOverview';
-import { Value } from '../common/Value';
-import { ValueChange } from '../common/ValueChange';
 
 export const BackstopJoinAnvil = () => {
   const theme = useTheme();
@@ -514,14 +510,21 @@ export const BackstopJoinAnvil = () => {
                   padding: '6px',
                   height: 'max-content',
                 }}
-                disabled={isSubmitDisabled}
+                disabled={true}
               >
                 Join
               </OpaqueButton>
             </Box>
           </Box>
         </Box>
-        {!isError && (
+        <AnvilAlert
+          severity={'warning'}
+          message={
+            'Depositing into the BLND-USDC LP is currently disabled due to an issue in the underlying protocol Comet.'
+          }
+          extraContent={undefined}
+        />
+        {/* {!isError && (
           <TxOverview>
             <>
               {' '}
@@ -587,7 +590,7 @@ export const BackstopJoinAnvil = () => {
         )}
         {isError && (
           <AnvilAlert severity={disabledType} message={reason} extraContent={extraContent} />
-        )}
+        )} */}
       </Section>
     </Row>
   );
