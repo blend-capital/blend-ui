@@ -6,7 +6,6 @@ import {
 } from '@blend-capital/blend-sdk';
 import { Box, Typography, useTheme } from '@mui/material';
 import { Horizon, rpc } from '@stellar/stellar-sdk';
-import Image from 'next/image';
 import { useMemo, useState } from 'react';
 import { useSettings, ViewType } from '../../contexts';
 import { TxStatus, TxType, useWallet } from '../../contexts/wallet';
@@ -30,9 +29,6 @@ import { Row } from '../common/Row';
 import { Section, SectionSize } from '../common/Section';
 import { Skeleton } from '../common/Skeleton';
 import { TxFeeSelector } from '../common/TxFeeSelector';
-import { TxOverview } from '../common/TxOverview';
-import { Value } from '../common/Value';
-import { ValueChange } from '../common/ValueChange';
 
 export const BackstopDepositAnvil: React.FC<PoolComponentProps> = ({ poolId }) => {
   const theme = useTheme();
@@ -202,7 +198,14 @@ export const BackstopDepositAnvil: React.FC<PoolComponentProps> = ({ poolId }) =
             </OpaqueButton>
           )}
         </Box>
-        {!isError && (
+        <AnvilAlert
+          severity={'warning'}
+          message={
+            "Depositing into the backstop is currently disabled due to an issue with Comet, the BLND-USDC LP token's underlying protocol."
+          }
+          extraContent={undefined}
+        />
+        {/* {!isError && (
           <TxOverview>
             <>
               <Value title="Amount to deposit" value={`${toDeposit ?? '0'} BLND-USDC LP`} />
@@ -232,7 +235,7 @@ export const BackstopDepositAnvil: React.FC<PoolComponentProps> = ({ poolId }) =
         )}
         {isError && (
           <AnvilAlert severity={disabledType} message={reason} extraContent={extraContent} />
-        )}
+        )} */}
       </Section>
     </Row>
   );
