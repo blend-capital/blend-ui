@@ -46,6 +46,7 @@ export interface ISettingsContext {
   showJoinPool: boolean;
   setShowJoinPool: (showJoinPool: boolean) => void;
   blockedPools: string[];
+  configuredPools: TrackedPool[];
   isV2Enabled: boolean;
 }
 
@@ -74,7 +75,7 @@ export const SettingsProvider = ({ children = null as any }) => {
       return undefined;
     }
   }, [lastPoolString]);
-  const trackedPools = useMemo(() => {
+  const storedPools = useMemo(() => {
     try {
       return JSON.parse(trackedPoolsString ?? '[]') as TrackedPool[];
     } catch (e) {
@@ -82,6 +83,19 @@ export const SettingsProvider = ({ children = null as any }) => {
       return [];
     }
   }, [trackedPoolsString]);
+  const configuredPools = useMemo(() => {
+    try {
+      return JSON.parse(process.env.NEXT_PUBLIC_CONFIGURED_POOLS ?? '[]') as TrackedPool[];
+    } catch (e) {
+      console.warn('Failed to parse NEXT_PUBLIC_CONFIGURED_POOLS:', e);
+      return [];
+    }
+  }, []);
+  const trackedPools = useMemo(() => {
+    const pools = new Map(storedPools.map((pool) => [pool.id, pool]));
+    configuredPools.forEach((pool) => pools.set(pool.id, pool));
+    return Array.from(pools.values());
+  }, [configuredPools, storedPools]);
   const network = useMemo(() => {
     try {
       let urls = JSON.parse(networkString ?? '{}') as NetworkUrls;
@@ -134,20 +148,20 @@ export const SettingsProvider = ({ children = null as any }) => {
   }
 
   function trackPool(poolMeta: PoolMeta) {
-    let index = trackedPools.findIndex((pool) => pool.id === poolMeta.id);
+    let index = storedPools.findIndex((pool) => pool.id === poolMeta.id);
     if (index !== -1) {
       if (
-        trackedPools[index].version !== poolMeta.version ||
-        trackedPools[index].name !== poolMeta.name
+        storedPools[index].version !== poolMeta.version ||
+        storedPools[index].name !== poolMeta.name
       ) {
-        trackedPools[index].version = poolMeta.version;
-        trackedPools[index].name = poolMeta.name;
-        setTrackedPoolsString(JSON.stringify(trackedPools));
+        const updated = [...storedPools];
+        updated[index] = { id: poolMeta.id, name: poolMeta.name, version: poolMeta.version };
+        setTrackedPoolsString(JSON.stringify(updated));
       }
     } else {
       setTrackedPoolsString(
         JSON.stringify([
-          ...trackedPools,
+          ...storedPools,
           { id: poolMeta.id, name: poolMeta.name, version: poolMeta.version },
         ])
       );
@@ -155,10 +169,9 @@ export const SettingsProvider = ({ children = null as any }) => {
   }
 
   function untrackPool(id: string) {
-    const index = trackedPools.findIndex((pool) => pool.id === id);
+    const index = storedPools.findIndex((pool) => pool.id === id);
     if (index !== -1) {
-      trackedPools.splice(index, 1);
-      setTrackedPoolsString(JSON.stringify(trackedPools));
+      setTrackedPoolsString(JSON.stringify(storedPools.filter((pool) => pool.id !== id)));
     }
   }
 
@@ -187,6 +200,7 @@ export const SettingsProvider = ({ children = null as any }) => {
         showJoinPool,
         setShowJoinPool,
         blockedPools,
+        configuredPools,
         isV2Enabled,
       }}
     >

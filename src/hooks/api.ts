@@ -249,7 +249,10 @@ export function usePoolOracle(
             }
             return new PoolOracle(pool.metadata.oracle, prices, decimals, latestLedger);
           } catch (e: any) {
-            console.error('Price fetcher call failed: ', e);
+            console.warn(
+              'Price fetcher call failed; falling back to direct oracle loading:',
+              e instanceof Error ? e.message : e
+            );
             // if the oracle fetcher fails, fallback to default loading method
             return await pool.loadOracle();
           }

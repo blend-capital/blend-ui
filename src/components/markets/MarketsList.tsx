@@ -25,7 +25,7 @@ export interface MarketListProps extends BoxProps {
 }
 
 export const MarketsList: React.FC<MarketListProps> = ({ version }) => {
-  const { blockedPools } = useSettings();
+  const { blockedPools, configuredPools } = useSettings();
   const { data: backstop } = useBackstop(version);
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -43,17 +43,24 @@ export const MarketsList: React.FC<MarketListProps> = ({ version }) => {
     .filter((value, index, self) => self.indexOf(value) === index)
     .sort();
 
-  const rewardZone = [...(backstop?.config?.rewardZone ?? [])].reverse();
-  const safeRewardZone = useMemo(
-    () => rewardZone.filter((poolId) => !blockedPools.includes(poolId)),
-    [rewardZone, blockedPools]
+  const marketPoolIds = useMemo(() => {
+    const rewardZone = [...(backstop?.config?.rewardZone ?? [])].reverse();
+    const configuredPoolIds = configuredPools
+      .filter((pool) => pool.version === version)
+      .map((pool) => pool.id);
+
+    return Array.from(new Set([...rewardZone, ...configuredPoolIds]));
+  }, [backstop, configuredPools, version]);
+  const safePoolIds = useMemo(
+    () => marketPoolIds.filter((poolId) => !blockedPools.includes(poolId)),
+    [marketPoolIds, blockedPools]
   );
 
   useEffect(() => {
     const loadedMarkets = Object.values(marketsData);
 
     if (loadedMarkets.length === 0) {
-      setSortedPoolIds(safeRewardZone);
+      setSortedPoolIds(safePoolIds);
       return;
     }
 
@@ -88,7 +95,7 @@ export const MarketsList: React.FC<MarketListProps> = ({ version }) => {
     const sortedIds = filteredMarkets.map((market) => market.poolId);
 
     // Add any pools that haven't loaded yet to the end of the list
-    const poolsWithNoData = safeRewardZone.filter((poolId) => !marketsData[poolId]);
+    const poolsWithNoData = safePoolIds.filter((poolId) => !marketsData[poolId]);
     // Only update state if the result is different
     const newSortedIds = [...sortedIds, ...poolsWithNoData];
     if (JSON.stringify(newSortedIds) !== JSON.stringify(sortedPoolIds)) {
@@ -96,7 +103,7 @@ export const MarketsList: React.FC<MarketListProps> = ({ version }) => {
     }
   }, [
     marketsData,
-    safeRewardZone,
+    safePoolIds,
     filters.sortBy,
     filters.sortDirection,
     filters.search,
@@ -143,7 +150,7 @@ export const MarketsList: React.FC<MarketListProps> = ({ version }) => {
     // Update index for progressive loading
     setCurrentIndex((prev) => {
       if (index >= prev) {
-        return Math.min(prev + 1, safeRewardZone.length);
+        return Math.min(prev + 1, safePoolIds.length);
       }
       return prev;
     });
@@ -183,7 +190,7 @@ export const MarketsList: React.FC<MarketListProps> = ({ version }) => {
           defaultFilters={filters}
         />
       </Row>
-      {safeRewardZone.length === 0 && (
+      {safePoolIds.length === 0 && (
         <Section
           width={SectionSize.FULL}
           sx={{
