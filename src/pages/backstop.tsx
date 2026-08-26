@@ -18,6 +18,7 @@ import type { NextPage } from 'next';
 import { useRouter } from 'next/router';
 import { BackstopAPR } from '../components/backstop/BackstopAPR';
 import { BackstopQueueMod } from '../components/backstop/BackstopQueueMod';
+import { AnvilAlert } from '../components/common/AnvilAlert';
 import { CustomButton } from '../components/common/CustomButton';
 import { Divider } from '../components/common/Divider';
 import { FlameIcon } from '../components/common/FlameIcon';
@@ -317,6 +318,21 @@ const Backstop: NextPage = () => {
         </SectionBase>
       </Row>
       <Divider />
+      <Box
+        width={SectionSize.FULL}
+        sx={{
+          display: 'flex',
+          margin: '6px',
+        }}
+      >
+        <AnvilAlert
+          severity={'warning'}
+          message={
+            'Due to an issue with Comet, the underlying protocol of the BLND-USDC LP token, the backstop APR is incorrect.'
+          }
+          extraContent={undefined}
+        />
+      </Box>
       <Row>
         <Section width={SectionSize.THIRD}>
           <BackstopAPR poolId={safePoolId} />
