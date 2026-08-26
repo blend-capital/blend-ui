@@ -44,10 +44,24 @@ export const MarketsList: React.FC<MarketListProps> = ({ version }) => {
     .sort();
 
   const rewardZone = [...(backstop?.config?.rewardZone ?? [])].reverse();
-  const safeRewardZone = useMemo(
-    () => rewardZone.filter((poolId) => !blockedPools.includes(poolId)),
-    [rewardZone, blockedPools]
-  );
+  const safeRewardZone = useMemo(() => {
+    // pools don't meet threshold due to comet bug. Hardcode
+    // pools that were in reward zone before the bug.
+    if (version === Version.V1) {
+      return [
+        'CDVQVKOY2YSXS2IC7KN6MNASSHPAO7UN2UR2ON4OI2SKMFJNVAMDX6DP',
+        'CBP7NO6F7FRDHSOFQBT2L2UWYIZ2PU76JKVRYAQTG3KZSQLYAOKIF2WB',
+        'CAQF5KNOFIGRI24NQRRGUPD46Q45MGMXZMRTQFXS25Y4NZVNPT34GM6S',
+      ];
+    } else {
+      return [
+        'CAJJZSGMMM3PD7N33TAPHGBUGTB43OC73HVIK2L2G6BNGGGYOSSYBXBD',
+        'CCCCIQSDILITHMM7PBSLVDT5MISSY7R26MNZXCX4H7J5JQ5FPIYOGYFS',
+        'CDMAVJPFXPADND3YRL4BSM3AKZWCTFMX27GLLXCML3PD62HEQS5FPVAI',
+        'CC4HHXPKR3FIXUQEC53MAK2IVWD6APAEBBXP5XCIW5FISN6PQOAC6UXG',
+      ];
+    }
+  }, [rewardZone, blockedPools]);
 
   useEffect(() => {
     const loadedMarkets = Object.values(marketsData);
