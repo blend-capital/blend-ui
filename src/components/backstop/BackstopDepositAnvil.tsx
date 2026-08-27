@@ -164,7 +164,7 @@ export const BackstopDepositAnvil: React.FC<PoolComponentProps> = ({ poolId }) =
                 onClick={() => handleSubmitTransaction(false)}
                 palette={theme.palette.backstop}
                 sx={{ minWidth: '108px', padding: '6px' }}
-                disabled={isSubmitDisabled}
+                disabled={true}
               >
                 Deposit
               </OpaqueButton>
@@ -192,7 +192,7 @@ export const BackstopDepositAnvil: React.FC<PoolComponentProps> = ({ poolId }) =
               onClick={() => handleSubmitTransaction(false)}
               palette={theme.palette.backstop}
               sx={{ minWidth: '108px', padding: '6px', width: '100%', marginTop: '6px' }}
-              disabled={isSubmitDisabled}
+              disabled={true}
             >
               Deposit
             </OpaqueButton>
