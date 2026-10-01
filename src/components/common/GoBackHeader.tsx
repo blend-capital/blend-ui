@@ -1,9 +1,9 @@
-import { Version } from '@blend-capital/blend-sdk';
 import { BoxProps } from '@mui/material';
 import { useSettings } from '../../contexts';
 import { PoolHeader } from '../pool/PoolHeader';
 import { GoBackButton } from './GoBackButton';
 import { Section, SectionSize } from './Section';
+import { Version } from '../../utils/version';
 
 export interface GoBackHeaderProps extends BoxProps {
   poolId: string;

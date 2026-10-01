@@ -1,6 +1,6 @@
-import { Version } from '@blend-capital/blend-sdk';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { Box, BoxProps, Typography } from '@mui/material';
+import { Networks } from '@stellar/stellar-sdk';
 import { useEffect, useMemo, useState } from 'react';
 import { useSettings } from '../../contexts';
 import { useBackstop } from '../../hooks/api';
@@ -10,6 +10,7 @@ import { Row } from '../common/Row';
 import { Section, SectionSize } from '../common/Section';
 import { MarketCard } from './MarketCard';
 import MarketFilter, { MarketFilters } from './MarketFilter';
+import { Version } from '../../utils/version';
 
 interface MarketData {
   poolId: string;
@@ -45,6 +46,10 @@ export const MarketsList: React.FC<MarketListProps> = ({ version }) => {
 
   const rewardZone = [...(backstop?.config?.rewardZone ?? [])].reverse();
   const safeRewardZone = useMemo(() => {
+    // the comet bug only broke the mainnet V1 and V2 reward zones
+    if (process.env.NEXT_PUBLIC_PASSPHRASE === Networks.TESTNET || version === Version.V2_1) {
+      return rewardZone.filter((poolId) => !blockedPools.includes(poolId));
+    }
     // pools don't meet threshold due to comet bug. Hardcode
     // pools that were in reward zone before the bug.
     if (version === Version.V1) {

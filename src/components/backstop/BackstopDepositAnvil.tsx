@@ -6,6 +6,7 @@ import {
 } from '@blend-capital/blend-sdk';
 import { Box, Typography, useTheme } from '@mui/material';
 import { Horizon, rpc } from '@stellar/stellar-sdk';
+import Image from 'next/image';
 import { useMemo, useState } from 'react';
 import { useSettings, ViewType } from '../../contexts';
 import { TxStatus, TxType, useWallet } from '../../contexts/wallet';
@@ -29,6 +30,10 @@ import { Row } from '../common/Row';
 import { Section, SectionSize } from '../common/Section';
 import { Skeleton } from '../common/Skeleton';
 import { TxFeeSelector } from '../common/TxFeeSelector';
+import { TxOverview } from '../common/TxOverview';
+import { Value } from '../common/Value';
+import { ValueChange } from '../common/ValueChange';
+import { Version } from '../../utils/version';
 
 export const BackstopDepositAnvil: React.FC<PoolComponentProps> = ({ poolId }) => {
   const theme = useTheme();
@@ -37,6 +42,8 @@ export const BackstopDepositAnvil: React.FC<PoolComponentProps> = ({ poolId }) =
     useWallet();
 
   const { data: poolMeta } = usePoolMeta(poolId);
+  // deposits stay closed for the backstops whose LP token was affected by the Comet incident
+  const depositsEnabled = poolMeta?.version === Version.V2_1;
   const { data: backstop } = useBackstop(poolMeta?.version);
   const { data: backstopPoolData } = useBackstopPool(poolMeta);
   const { data: backstopUserPoolData } = useBackstopPoolUser(poolMeta);
@@ -164,7 +171,7 @@ export const BackstopDepositAnvil: React.FC<PoolComponentProps> = ({ poolId }) =
                 onClick={() => handleSubmitTransaction(false)}
                 palette={theme.palette.backstop}
                 sx={{ minWidth: '108px', padding: '6px' }}
-                disabled={true}
+                disabled={!depositsEnabled || isSubmitDisabled}
               >
                 Deposit
               </OpaqueButton>
@@ -192,20 +199,22 @@ export const BackstopDepositAnvil: React.FC<PoolComponentProps> = ({ poolId }) =
               onClick={() => handleSubmitTransaction(false)}
               palette={theme.palette.backstop}
               sx={{ minWidth: '108px', padding: '6px', width: '100%', marginTop: '6px' }}
-              disabled={true}
+              disabled={!depositsEnabled || isSubmitDisabled}
             >
               Deposit
             </OpaqueButton>
           )}
         </Box>
-        <AnvilAlert
-          severity={'warning'}
-          message={
-            "Depositing into the backstop is currently disabled due to an issue with Comet, the BLND-USDC LP token's underlying protocol."
-          }
-          extraContent={undefined}
-        />
-        {/* {!isError && (
+        {!depositsEnabled && (
+          <AnvilAlert
+            severity={'warning'}
+            message={
+              "Depositing into the backstop is currently disabled due to an issue with Comet, the BLND-USDC LP token's underlying protocol."
+            }
+            extraContent={undefined}
+          />
+        )}
+        {depositsEnabled && !isError && (
           <TxOverview>
             <>
               <Value title="Amount to deposit" value={`${toDeposit ?? '0'} BLND-USDC LP`} />
@@ -233,9 +242,9 @@ export const BackstopDepositAnvil: React.FC<PoolComponentProps> = ({ poolId }) =
             </>
           </TxOverview>
         )}
-        {isError && (
+        {depositsEnabled && isError && (
           <AnvilAlert severity={disabledType} message={reason} extraContent={extraContent} />
-        )} */}
+        )}
       </Section>
     </Row>
   );

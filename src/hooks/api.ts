@@ -20,7 +20,6 @@ import {
   Positions,
   TokenMetadata,
   UserBalance,
-  Version,
 } from '@blend-capital/blend-sdk';
 import {
   Account,
@@ -49,11 +48,10 @@ import { getTokenBalance } from '../external/token';
 import { getOraclePrices } from '../utils/stellar_rpc';
 import { ReserveTokenMetadata } from '../utils/token';
 import { NOT_BLEND_POOL_ERROR_MESSAGE, PoolMeta } from './types';
+import { BACKSTOP_IDS, isV2Contracts, Version } from '../utils/version';
 
 const DEFAULT_STALE_TIME = 30 * 1000;
 const USER_STALE_TIME = 60 * 1000;
-const BACKSTOP_ID = process.env.NEXT_PUBLIC_BACKSTOP || '';
-const BACKSTOP_ID_V2 = process.env.NEXT_PUBLIC_BACKSTOP_V2 || '';
 const ORACLE_PRICE_FETCHER = process.env.NEXT_PUBLIC_ORACLE_PRICE_FETCHER;
 
 //********** Query Client Data **********//
@@ -147,7 +145,7 @@ export function usePoolMeta(
           metadata.wasmHash === 'baf978f10efdbcd85747868bef8832845ea6809f7643b67a4ac0cd669327fc2c'
         ) {
           // v1 pool - validate backstop is correct
-          if (metadata.backstop === BACKSTOP_ID) {
+          if (metadata.backstop === BACKSTOP_IDS[Version.V1]) {
             return { id: poolId, version: Version.V1, ...metadata } as PoolMeta;
           }
         } else if (
@@ -158,9 +156,12 @@ export function usePoolMeta(
             metadata.wasmHash ===
               '6a7c67449f6bad0d5f641cfbdf03f430ec718faa85107ecb0b97df93410d1c43')
         ) {
-          // v2 pool - validate backstop is correct
-          if (metadata.backstop === BACKSTOP_ID_V2) {
+          // v2 contracts - the backstop identifies the deployment
+          if (metadata.backstop === BACKSTOP_IDS[Version.V2]) {
             return { id: poolId, version: Version.V2, ...metadata } as PoolMeta;
+          }
+          if (metadata.backstop === BACKSTOP_IDS[Version.V2_1]) {
+            return { id: poolId, version: Version.V2_1, ...metadata } as PoolMeta;
           }
         }
         throw new Error(NOT_BLEND_POOL_ERROR_MESSAGE);
@@ -201,7 +202,7 @@ export function usePool(
     queryFn: async () => {
       if (poolMeta !== undefined) {
         try {
-          if (poolMeta.version === Version.V2) {
+          if (isV2Contracts(poolMeta.version)) {
             return await PoolV2.loadWithMetadata(network, poolMeta.id, poolMeta);
           } else {
             return await PoolV1.loadWithMetadata(network, poolMeta.id, poolMeta);
@@ -308,7 +309,7 @@ export function useBackstop(
     queryKey: ['backstop', version],
     enabled: enabled && version !== undefined,
     queryFn: async () => {
-      return await Backstop.load(network, version === Version.V2 ? BACKSTOP_ID_V2 : BACKSTOP_ID);
+      return await Backstop.load(network, BACKSTOP_IDS[version ?? Version.V1]);
     },
   });
 }
@@ -330,9 +331,9 @@ export function useBackstopPool(
     enabled: enabled && poolMeta !== undefined,
     queryFn: async () => {
       if (poolMeta !== undefined) {
-        return poolMeta.version === Version.V2
-          ? await BackstopPoolV2.load(network, BACKSTOP_ID_V2, poolMeta.id)
-          : await BackstopPoolV1.load(network, BACKSTOP_ID, poolMeta.id);
+        return isV2Contracts(poolMeta.version)
+          ? await BackstopPoolV2.load(network, BACKSTOP_IDS[poolMeta.version], poolMeta.id)
+          : await BackstopPoolV1.load(network, BACKSTOP_IDS[Version.V1], poolMeta.id);
       }
     },
   });
@@ -364,7 +365,7 @@ export function useBackstopPoolUser(
       if (walletAddress !== '' && poolMeta !== undefined) {
         return await BackstopPoolUser.load(
           network,
-          poolMeta.version === Version.V2 ? BACKSTOP_ID_V2 : BACKSTOP_ID,
+          BACKSTOP_IDS[poolMeta.version],
           poolMeta.id,
           walletAddress
         );

@@ -1,4 +1,3 @@
-import { Version } from '@blend-capital/blend-sdk';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import { Menu, MenuItem, useTheme } from '@mui/material';
 import { useRouter } from 'next/router';
@@ -7,6 +6,7 @@ import { useSettings } from '../../contexts';
 import { CustomButton } from '../common/CustomButton';
 import { PoolComponentProps } from '../common/PoolComponentProps';
 import { PoolHeader } from './PoolHeader';
+import { Version } from '../../utils/version';
 
 export const PoolMenu: React.FC<PoolComponentProps> = ({ poolId }) => {
   const theme = useTheme();

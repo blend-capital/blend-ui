@@ -1,4 +1,3 @@
-import { Version } from '@blend-capital/blend-sdk';
 import MenuIcon from '@mui/icons-material/Menu';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { Alert, IconButton, Menu, MenuItem, Snackbar, Typography, useTheme } from '@mui/material';
@@ -7,6 +6,7 @@ import React from 'react';
 import { useSettings, ViewType } from '../../contexts';
 import { useBackstop } from '../../hooks/api';
 import { NavItem } from './NavItem';
+import { Version } from '../../utils/version';
 
 export const NavMenu = () => {
   const theme = useTheme();

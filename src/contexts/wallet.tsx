@@ -12,7 +12,6 @@ import {
   PoolContractV2,
   Positions,
   SubmitArgs,
-  Version,
 } from '@blend-capital/blend-sdk';
 import { SwkAppDarkTheme } from '@creit.tech/stellar-wallets-kit';
 import {
@@ -30,6 +29,7 @@ import { useQueryClientCacheCleaner } from '../hooks/api';
 import { PoolMeta } from '../hooks/types';
 import { CometClient, CometLiquidityArgs, CometSingleSidedDepositArgs } from '../utils/comet';
 import { useSettings } from './settings';
+import { BACKSTOP_IDS, isV2Contracts, Version } from '../utils/version';
 
 type WalletKit = typeof import('@creit.tech/stellar-wallets-kit').StellarWalletsKit;
 type WalletKitNetwork = import('@creit.tech/stellar-wallets-kit').Networks;
@@ -584,10 +584,9 @@ export const WalletProvider: React.FC<React.PropsWithChildren> = ({ children }) 
     sim: boolean
   ): Promise<rpc.Api.SimulateTransactionResponse | undefined> {
     if (connected) {
-      const backstop =
-        poolMeta.version === Version.V2
-          ? new BackstopContractV2(process.env.NEXT_PUBLIC_BACKSTOP_V2 ?? '')
-          : new BackstopContractV1(process.env.NEXT_PUBLIC_BACKSTOP ?? '');
+      const backstop = isV2Contracts(poolMeta.version)
+        ? new BackstopContractV2(BACKSTOP_IDS[poolMeta.version])
+        : new BackstopContractV1(BACKSTOP_IDS[Version.V1]);
       const operation = xdr.Operation.fromXDR(backstop.deposit(args), 'base64');
       if (sim) {
         return await simulateOperation(operation);
@@ -615,10 +614,9 @@ export const WalletProvider: React.FC<React.PropsWithChildren> = ({ children }) 
     sim: boolean
   ): Promise<rpc.Api.SimulateTransactionResponse | undefined> {
     if (connected) {
-      const backstop =
-        poolMeta.version === Version.V2
-          ? new BackstopContractV2(process.env.NEXT_PUBLIC_BACKSTOP_V2 ?? '')
-          : new BackstopContractV1(process.env.NEXT_PUBLIC_BACKSTOP ?? '');
+      const backstop = isV2Contracts(poolMeta.version)
+        ? new BackstopContractV2(BACKSTOP_IDS[poolMeta.version])
+        : new BackstopContractV1(BACKSTOP_IDS[Version.V1]);
       const operation = xdr.Operation.fromXDR(backstop.withdraw(args), 'base64');
       if (sim) {
         return await simulateOperation(operation);
@@ -646,10 +644,9 @@ export const WalletProvider: React.FC<React.PropsWithChildren> = ({ children }) 
     sim: boolean
   ): Promise<rpc.Api.SimulateTransactionResponse | undefined> {
     if (connected) {
-      const backstop =
-        poolMeta.version === Version.V2
-          ? new BackstopContractV2(process.env.NEXT_PUBLIC_BACKSTOP_V2 ?? '')
-          : new BackstopContractV1(process.env.NEXT_PUBLIC_BACKSTOP ?? '');
+      const backstop = isV2Contracts(poolMeta.version)
+        ? new BackstopContractV2(BACKSTOP_IDS[poolMeta.version])
+        : new BackstopContractV1(BACKSTOP_IDS[Version.V1]);
       const operation = xdr.Operation.fromXDR(backstop.queueWithdrawal(args), 'base64');
       if (sim) {
         return await simulateOperation(operation);
@@ -676,10 +673,9 @@ export const WalletProvider: React.FC<React.PropsWithChildren> = ({ children }) 
     sim: boolean
   ): Promise<rpc.Api.SimulateTransactionResponse | undefined> {
     if (connected) {
-      const backstop =
-        poolMeta.version === Version.V2
-          ? new BackstopContractV2(process.env.NEXT_PUBLIC_BACKSTOP_V2 ?? '')
-          : new BackstopContractV1(process.env.NEXT_PUBLIC_BACKSTOP ?? '');
+      const backstop = isV2Contracts(poolMeta.version)
+        ? new BackstopContractV2(BACKSTOP_IDS[poolMeta.version])
+        : new BackstopContractV1(BACKSTOP_IDS[Version.V1]);
       const operation = xdr.Operation.fromXDR(backstop.dequeueWithdrawal(args), 'base64');
       if (sim) {
         return await simulateOperation(operation);
@@ -707,12 +703,12 @@ export const WalletProvider: React.FC<React.PropsWithChildren> = ({ children }) 
   ): Promise<rpc.Api.SimulateTransactionResponse | undefined> {
     if (connected) {
       let operation = '';
-      if (poolMeta.version === Version.V2) {
-        operation = new BackstopContractV2(process.env.NEXT_PUBLIC_BACKSTOP_V2 ?? '').claim(
+      if (isV2Contracts(poolMeta.version)) {
+        operation = new BackstopContractV2(BACKSTOP_IDS[poolMeta.version]).claim(
           claimArgs as BackstopClaimV2Args
         );
       } else {
-        operation = new BackstopContractV1(process.env.NEXT_PUBLIC_BACKSTOP ?? '').claim(
+        operation = new BackstopContractV1(BACKSTOP_IDS[Version.V1]).claim(
           claimArgs as BackstopClaimV1Args
         );
       }
@@ -802,7 +798,11 @@ export const WalletProvider: React.FC<React.PropsWithChildren> = ({ children }) 
 
   async function faucet(): Promise<undefined> {
     if (connected && process.env.NEXT_PUBLIC_PASSPHRASE === Networks.TESTNET) {
-      const url = `https://ewqw4hx7oa.execute-api.us-east-1.amazonaws.com/getAssets?userId=${walletAddress}`;
+      // the faucet only allows requests from testnet.blend.capital; other hosts relay it themselves
+      const faucetUrl =
+        process.env.NEXT_PUBLIC_FAUCET_URL ||
+        'https://ewqw4hx7oa.execute-api.us-east-1.amazonaws.com';
+      const url = `${faucetUrl}/getAssets?userId=${walletAddress}`;
       try {
         setTxStatus(TxStatus.BUILDING);
         const resp = await fetch(url, { method: 'GET' });

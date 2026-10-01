@@ -1,4 +1,3 @@
-import { Version } from '@blend-capital/blend-sdk';
 import { Box, IconButton } from '@mui/material';
 import Image from 'next/image';
 import { ViewType, useSettings } from '../../contexts';
@@ -9,6 +8,7 @@ import { SectionBase } from '../common/SectionBase';
 import { NavItem } from './NavItem';
 import { NavMenu } from './NavMenu';
 import { WalletMenu } from './WalletMenu';
+import { Version } from '../../utils/version';
 
 export const NavBar = () => {
   const { viewType, lastPool } = useSettings();
