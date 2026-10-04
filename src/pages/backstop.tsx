@@ -9,7 +9,6 @@ import {
   FixedMath,
   parseError,
   parseResult,
-  Version,
 } from '@blend-capital/blend-sdk';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { Box, Tooltip, Typography } from '@mui/material';
@@ -30,10 +29,10 @@ import { Section, SectionSize } from '../components/common/Section';
 import { SectionBase } from '../components/common/SectionBase';
 import { StackedText } from '../components/common/StackedText';
 import { TooltipText } from '../components/common/TooltipText';
+import { EmissionsCreditBanner } from '../components/pool/EmissionsCreditBanner';
 import { NotPoolBar } from '../components/pool/NotPoolBar';
 import { PoolExploreBar } from '../components/pool/PoolExploreBar';
 import { PoolHealthBanner } from '../components/pool/PoolHealthBanner';
-import { useSettings } from '../contexts/settings';
 import { useWallet } from '../contexts/wallet';
 import {
   useBackstop,
@@ -48,10 +47,10 @@ import { NOT_BLEND_POOL_ERROR_MESSAGE } from '../hooks/types';
 import theme from '../theme';
 import { CometClient } from '../utils/comet';
 import { toBalance, toPercentage } from '../utils/formatter';
+import { BACKSTOP_IDS, isV2Contracts, V2_1_CLAIM_NOTICE, Version } from '../utils/version';
 
 const Backstop: NextPage = () => {
   const router = useRouter();
-  const { isV2Enabled } = useSettings();
   const { connected, walletAddress, backstopClaim, restore } = useWallet();
 
   const { poolId } = router.query;
@@ -90,13 +89,13 @@ const Backstop: NextPage = () => {
 
   let claimOp = '';
 
-  if (isV2Enabled && poolMeta?.version == Version.V2) {
+  if (poolMeta !== undefined && isV2Contracts(poolMeta.version)) {
     const claimArgs: BackstopClaimV2Args = {
       from: walletAddress,
       pool_addresses: [safePoolId],
       min_lp_tokens_out: BigInt(0),
     };
-    let backstopContract = new BackstopContractV2(process.env.NEXT_PUBLIC_BACKSTOP_V2 ?? '');
+    let backstopContract = new BackstopContractV2(BACKSTOP_IDS[poolMeta.version]);
     claimOp =
       safePoolId && walletAddress !== '' && backstopContract
         ? backstopContract.claim(claimArgs)
@@ -107,7 +106,7 @@ const Backstop: NextPage = () => {
       pool_addresses: [safePoolId],
       to: walletAddress,
     };
-    let backstopContract = new BackstopContractV1(process.env.NEXT_PUBLIC_BACKSTOP ?? '');
+    let backstopContract = new BackstopContractV1(BACKSTOP_IDS[Version.V1]);
     claimOp =
       safePoolId && walletAddress !== '' && backstopContract
         ? backstopContract.claim(claimArgs)
@@ -127,6 +126,10 @@ const Backstop: NextPage = () => {
     isClaimLoading === false &&
     claimSimResult !== undefined &&
     rpc.Api.isSimulationError(claimSimResult);
+  // V2.1 emissions stay credit until the backstop holds the BLND to pay the claim
+  const isV2_1 = poolMeta?.version === Version.V2_1;
+  const isCreditOnly =
+    isV2_1 && !(claimSimResult !== undefined && rpc.Api.isSimulationSuccess(claimSimResult));
 
   const cometContract =
     backstop !== undefined ? new CometClient(backstop.backstopToken.id) : undefined;
@@ -162,7 +165,7 @@ const Backstop: NextPage = () => {
   const handleClaimEmissionsClick = async () => {
     if (connected && poolMeta && userBackstopPoolData) {
       let claimArgs: BackstopClaimV1Args | BackstopClaimV2Args;
-      if (isV2Enabled && poolMeta.version == Version.V2) {
+      if (isV2Contracts(poolMeta.version)) {
         claimArgs = {
           from: walletAddress,
           pool_addresses: [safePoolId],
@@ -178,7 +181,7 @@ const Backstop: NextPage = () => {
   };
 
   const renderClaimButton = () => {
-    if (!isRestore && !isError)
+    if (!isRestore && !isError && !isCreditOnly)
       return (
         <CustomButton
           sx={{
@@ -225,6 +228,10 @@ const Backstop: NextPage = () => {
       if (isRestore) {
         buttonText = 'Restore Data';
         onClick = handleRestore;
+      } else if (isCreditOnly) {
+        buttonText = `${toBalance(backstopUserEst?.emissions)} BLND accrued`;
+        buttonTooltip = V2_1_CLAIM_NOTICE;
+        disabled = true;
       } else if (isError) {
         const claimError = parseError(claimSimResult);
         buttonText = 'Error checking claim';
@@ -318,21 +325,26 @@ const Backstop: NextPage = () => {
         </SectionBase>
       </Row>
       <Divider />
-      <Box
-        width={SectionSize.FULL}
-        sx={{
-          display: 'flex',
-          margin: '6px',
-        }}
-      >
-        <AnvilAlert
-          severity={'warning'}
-          message={
-            'Due to an issue with Comet, the underlying protocol of the BLND-USDC LP token, the backstop APR is incorrect.'
-          }
-          extraContent={undefined}
-        />
-      </Box>
+      {poolMeta !== undefined &&
+        (poolMeta.version === Version.V2_1 ? (
+          <EmissionsCreditBanner />
+        ) : (
+          <Box
+            width={SectionSize.FULL}
+            sx={{
+              display: 'flex',
+              margin: '6px',
+            }}
+          >
+            <AnvilAlert
+              severity={'warning'}
+              message={
+                'Due to an issue with Comet, the underlying protocol of the BLND-USDC LP token, the backstop APR is incorrect.'
+              }
+              extraContent={undefined}
+            />
+          </Box>
+        ))}
       <Row>
         <Section width={SectionSize.THIRD}>
           <BackstopAPR poolId={safePoolId} />
@@ -409,22 +421,24 @@ const Backstop: NextPage = () => {
           </Section>
         </Row>
       )}
-      {!isRestore && lpTokenEmissions !== undefined && lpTokenEmissions > BigInt(0) && (
-        <Row>
-          <Section
-            width={SectionSize.FULL}
-            sx={{
-              flexDirection: 'column',
-              paddingTop: '12px',
-            }}
-          >
-            <Typography variant="body2" sx={{ margin: '6px' }}>
-              Emissions to claim
-            </Typography>
-            <Row>{renderClaimButton()}</Row>
-          </Section>
-        </Row>
-      )}
+      {!isRestore &&
+        ((lpTokenEmissions !== undefined && lpTokenEmissions > BigInt(0)) ||
+          (isV2_1 && (backstopUserEst?.emissions ?? 0) > 0)) && (
+          <Row>
+            <Section
+              width={SectionSize.FULL}
+              sx={{
+                flexDirection: 'column',
+                paddingTop: '12px',
+              }}
+            >
+              <Typography variant="body2" sx={{ margin: '6px' }}>
+                Emissions to claim
+              </Typography>
+              <Row>{renderClaimButton()}</Row>
+            </Section>
+          </Row>
+        )}
       <Row>
         <Section
           width={SectionSize.FULL}

@@ -1,4 +1,3 @@
-import { Version } from '@blend-capital/blend-sdk';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { IconButton, Typography, useTheme } from '@mui/material';
 import type { NextPage } from 'next';
@@ -11,10 +10,12 @@ import { Row } from '../components/common/Row';
 import { Section, SectionSize } from '../components/common/Section';
 import { StackedText } from '../components/common/StackedText';
 import { ToggleButton } from '../components/common/ToggleButton';
+import { VersionTag } from '../components/common/VersionTag';
 import { ViewType, useSettings } from '../contexts';
 import { useBackstop, useHorizonAccount, useTokenBalance } from '../hooks/api';
 import { toBalance } from '../utils/formatter';
 import { BLND_ASSET, USDC_ASSET } from '../utils/token_display';
+import { LATEST_VERSION } from '../utils/version';
 
 const BackstopToken: NextPage = () => {
   const theme = useTheme();
@@ -23,7 +24,7 @@ const BackstopToken: NextPage = () => {
   const BLND_CONTRACT_ID = BLND_ASSET.contractId(network.passphrase);
   const USDC_CONTRACT_ID = USDC_ASSET.contractId(network.passphrase);
 
-  const { data: backstop } = useBackstop(Version.V1);
+  const { data: backstop } = useBackstop(LATEST_VERSION);
   const { data: horizonAccount } = useHorizonAccount();
   const { data: blndBalanceRes } = useTokenBalance(BLND_CONTRACT_ID, BLND_ASSET, horizonAccount);
   const { data: usdcBalanceRes } = useTokenBalance(USDC_CONTRACT_ID, USDC_ASSET, horizonAccount);
@@ -64,6 +65,7 @@ const BackstopToken: NextPage = () => {
           sx={{ marginRight: '12px' }}
         />
         <Typography variant="h2">{title}</Typography>
+        <VersionTag version={LATEST_VERSION} sx={{ marginLeft: '6px' }} />
         <IconButton
           onClick={() =>
             window.open(

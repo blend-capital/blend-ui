@@ -1,7 +1,7 @@
-import { Version } from '@blend-capital/blend-sdk';
 import { Box, BoxProps, Typography } from '@mui/material';
 import { VersionTag } from '../common/VersionTag';
 import { PoolIcon } from './PoolIcon';
+import { Version } from '../../utils/version';
 
 export interface PoolHeaderProps extends BoxProps {
   name: string;

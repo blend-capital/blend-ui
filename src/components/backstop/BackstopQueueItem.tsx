@@ -1,4 +1,4 @@
-import { BackstopContractV1, PoolBackstopActionArgs, Q4W, Version } from '@blend-capital/blend-sdk';
+import { BackstopContractV1, PoolBackstopActionArgs, Q4W } from '@blend-capital/blend-sdk';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import { Box, CircularProgress, SxProps, Theme, Tooltip, Typography } from '@mui/material';
 import { rpc } from '@stellar/stellar-sdk';
@@ -12,6 +12,7 @@ import { Icon } from '../common/Icon';
 import { OpaqueButton } from '../common/OpaqueButton';
 import { PoolComponentProps } from '../common/PoolComponentProps';
 import { Row } from '../common/Row';
+import { BACKSTOP_IDS, isV2Contracts, Version } from '../../utils/version';
 
 export interface BackstopQueueItemProps extends PoolComponentProps {
   version: Version;
@@ -32,10 +33,7 @@ export const BackstopQueueItem: React.FC<BackstopQueueItemProps> = ({
 
   const { data: poolMeta } = usePoolMeta(poolId);
 
-  const backstop =
-    poolMeta?.version === Version.V2
-      ? new BackstopContractV1(process.env.NEXT_PUBLIC_BACKSTOP_V2 ?? '')
-      : new BackstopContractV1(process.env.NEXT_PUBLIC_BACKSTOP ?? '');
+  const backstop = new BackstopContractV1(BACKSTOP_IDS[poolMeta?.version ?? Version.V1]);
   const actionArgs: PoolBackstopActionArgs = {
     from: walletAddress,
     pool_address: poolId,
@@ -86,9 +84,9 @@ export const BackstopQueueItem: React.FC<BackstopQueueItemProps> = ({
   const queueItemActionButton = (sx: SxProps<Theme>) => {
     const needsTooltip = !enabled || isRestore;
     const tooltipMessage = !enabled
-      ? poolMeta?.version === Version.V2
-        ? 'You can only unqueue the oldest withdrawal'
-        : 'You can only unqueue the most recent withdrawal'
+      ? isV2Contracts(poolMeta?.version)
+        ? 'You can only unqueue the most recent withdrawal'
+        : 'You can only unqueue the oldest withdrawal'
       : 'This transaction ran into expired entries which need to be restored before proceeding.';
 
     return needsTooltip ? (

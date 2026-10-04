@@ -1,10 +1,11 @@
-import { FixedMath, Version } from '@blend-capital/blend-sdk';
+import { FixedMath } from '@blend-capital/blend-sdk';
 import { Box, Typography, useTheme } from '@mui/material';
 import { useBackstop, useBackstopPool, useBackstopPoolUser, usePoolMeta } from '../../hooks/api';
 import { PoolComponentProps } from '../common/PoolComponentProps';
 import { Row } from '../common/Row';
 import { Section, SectionSize } from '../common/Section';
 import { BackstopQueueItem } from './BackstopQueueItem';
+import { isV2Contracts } from '../../utils/version';
 
 export const BackstopQueueMod: React.FC<PoolComponentProps> = ({ poolId }) => {
   const theme = useTheme();
@@ -61,7 +62,7 @@ export const BackstopQueueMod: React.FC<PoolComponentProps> = ({ poolId }) => {
           .sort((a, b) => Number(a.exp) - Number(b.exp))
           .map((q4w, index) => {
             let canUnqueue = false;
-            if (poolMeta.version === Version.V2) {
+            if (isV2Contracts(poolMeta.version)) {
               // V2 unqueues from the most recently queued entry
               canUnqueue = totalQ4WEntries - 1 === index;
             } else {

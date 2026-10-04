@@ -1,9 +1,10 @@
-import { Network, Version } from '@blend-capital/blend-sdk';
+import { Network } from '@blend-capital/blend-sdk';
 import { useMediaQuery, useTheme } from '@mui/material';
 import { Horizon, rpc } from '@stellar/stellar-sdk';
 import React, { useContext, useMemo, useState } from 'react';
 import { useLocalStorageState } from '../hooks';
 import { PoolMeta } from '../hooks/types';
+import { Version } from '../utils/version';
 
 const DEFAULT_RPC = process.env.NEXT_PUBLIC_RPC_URL || 'https://soroban-testnet.stellar.org';
 const DEFAULT_HORIZON =

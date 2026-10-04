@@ -1,5 +1,5 @@
-import { Version } from '@blend-capital/blend-sdk';
 import { Typography, TypographyProps, useTheme } from '@mui/material';
+import { Version } from '../../utils/version';
 
 export interface VersionTagProps extends TypographyProps {
   version: Version;

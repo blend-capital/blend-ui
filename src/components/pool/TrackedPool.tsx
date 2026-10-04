@@ -1,9 +1,9 @@
-import { Version } from '@blend-capital/blend-sdk';
 import { Box, BoxProps, Typography } from '@mui/material';
 import { useSettings } from '../../contexts';
 import { Row } from '../common/Row';
 import { VersionTag } from '../common/VersionTag';
 import { PoolIcon } from './PoolIcon';
+import { Version } from '../../utils/version';
 
 export interface TrackedPoolProps extends BoxProps {
   name: string;

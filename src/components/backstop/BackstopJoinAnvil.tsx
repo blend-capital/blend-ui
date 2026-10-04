@@ -1,7 +1,8 @@
-import { Version, parseResult } from '@blend-capital/blend-sdk';
+import { parseResult } from '@blend-capital/blend-sdk';
 import { LoopOutlined } from '@mui/icons-material';
 import { Box, Typography, useTheme } from '@mui/material';
 import { rpc, scValToBigInt, xdr } from '@stellar/stellar-sdk';
+import Image from 'next/image';
 import { useMemo, useState } from 'react';
 import { ViewType, useSettings } from '../../contexts';
 import { TxStatus, TxType, useWallet } from '../../contexts/wallet';
@@ -20,6 +21,10 @@ import { Row } from '../common/Row';
 import { Section, SectionSize } from '../common/Section';
 import { Skeleton } from '../common/Skeleton';
 import { TxFeeSelector } from '../common/TxFeeSelector';
+import { TxOverview } from '../common/TxOverview';
+import { Value } from '../common/Value';
+import { ValueChange } from '../common/ValueChange';
+import { LATEST_VERSION, Version } from '../../utils/version';
 
 export const BackstopJoinAnvil = () => {
   const theme = useTheme();
@@ -37,7 +42,9 @@ export const BackstopJoinAnvil = () => {
   const BLND_ID = BLND_ASSET.contractId(network.passphrase);
   const USDC_ID = USDC_ASSET.contractId(network.passphrase);
 
-  const { data: backstop } = useBackstop(Version.V1);
+  // joins stay closed on the LP token affected by the Comet incident
+  const joinsEnabled = LATEST_VERSION === Version.V2_1;
+  const { data: backstop } = useBackstop(LATEST_VERSION);
   const { data: horizonAccount } = useHorizonAccount();
   const { data: blndBalanceRes } = useTokenBalance(BLND_ID, BLND_ASSET, horizonAccount);
   const { data: usdcBalanceRes } = useTokenBalance(USDC_ID, USDC_ASSET, horizonAccount);
@@ -510,21 +517,23 @@ export const BackstopJoinAnvil = () => {
                   padding: '6px',
                   height: 'max-content',
                 }}
-                disabled={true}
+                disabled={!joinsEnabled || isSubmitDisabled}
               >
                 Join
               </OpaqueButton>
             </Box>
           </Box>
         </Box>
-        <AnvilAlert
-          severity={'warning'}
-          message={
-            'Depositing into the BLND-USDC LP is currently disabled due to an issue in the underlying protocol Comet.'
-          }
-          extraContent={undefined}
-        />
-        {/* {!isError && (
+        {!joinsEnabled && (
+          <AnvilAlert
+            severity={'warning'}
+            message={
+              'Depositing into the BLND-USDC LP is currently disabled due to an issue in the underlying protocol Comet.'
+            }
+            extraContent={undefined}
+          />
+        )}
+        {joinsEnabled && !isError && (
           <TxOverview>
             <>
               {' '}
@@ -588,9 +597,9 @@ export const BackstopJoinAnvil = () => {
             </>
           </TxOverview>
         )}
-        {isError && (
+        {joinsEnabled && isError && (
           <AnvilAlert severity={disabledType} message={reason} extraContent={extraContent} />
-        )} */}
+        )}
       </Section>
     </Row>
   );
