@@ -31,13 +31,6 @@ export const ENABLED_VERSIONS: Version[] = Object.values(Version).filter(
 export const LATEST_VERSION: Version = ENABLED_VERSIONS[ENABLED_VERSIONS.length - 1] ?? Version.V1;
 
 /**
- * The V2.1 backstop holds no BLND, so emissions accrue but claims fail until BLND is sent to it.
- */
-export const V2_1_EMISSIONS_NOTICE =
-  'V2.1 BLND emissions accrue as credit and may be paid out in the future. This is not guaranteed.';
-export const V2_1_CLAIM_NOTICE = 'Claimable once BLND is added to the V2.1 backstop.';
-
-/**
  * Whether a deployment runs the v2 contracts.
  */
 export function isV2Contracts(version: Version | undefined): boolean {
