@@ -1,7 +1,7 @@
 import { Box, Typography, useTheme } from '@mui/material';
 import { rpc } from '@stellar/stellar-sdk';
 import Image from 'next/image';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { ViewType, useSettings } from '../../contexts';
 import { TxStatus, TxType, useWallet } from '../../contexts/wallet';
 import { useBackstop, useHorizonAccount, useTokenBalance } from '../../hooks/api';
@@ -23,9 +23,9 @@ import { TxFeeSelector } from '../common/TxFeeSelector';
 import { TxOverview } from '../common/TxOverview';
 import { Value } from '../common/Value';
 import { ValueChange } from '../common/ValueChange';
-import { LATEST_VERSION } from '../../utils/version';
+import { Version } from '../../utils/version';
 
-export const BackstopExitAnvil = () => {
+export const BackstopExitAnvil = ({ version }: { version: Version }) => {
   const theme = useTheme();
   const { viewType, network } = useSettings();
   const {
@@ -41,7 +41,7 @@ export const BackstopExitAnvil = () => {
   const BLND_ID = BLND_ASSET.contractId(network.passphrase);
   const USDC_ID = USDC_ASSET.contractId(network.passphrase);
 
-  const { data: backstop } = useBackstop(LATEST_VERSION);
+  const { data: backstop } = useBackstop(version);
   const { data: horizonAccount } = useHorizonAccount();
   const { data: blndBalanceRes } = useTokenBalance(BLND_ID, BLND_ASSET, horizonAccount);
   const { data: usdcBalanceRes } = useTokenBalance(USDC_ID, USDC_ASSET, horizonAccount);
@@ -61,6 +61,8 @@ export const BackstopExitAnvil = () => {
 
   const [loadingEstimate, setLoadingEstimate] = useState<boolean>(false);
   const [simResponse, setSimResponse] = useState<rpc.Api.SimulateTransactionResponse>();
+  // only the latest estimate request may update the results
+  const latestRequest = useRef<number>(0);
   const loading = isLoading || loadingEstimate;
   const decimals = 7;
 
@@ -71,10 +73,14 @@ export const BackstopExitAnvil = () => {
   };
 
   const handleSetInputAmount = (value: string) => {
+    clearInputResultState();
+    setLoadingEstimate(true);
     setInput({ amount: value, slippage: input.slippage });
   };
 
   const handleSetInputMaxSlippage = (value: string) => {
+    clearInputResultState();
+    setLoadingEstimate(true);
     setInput({ amount: input.amount, slippage: value });
   };
 
@@ -151,9 +157,15 @@ export const BackstopExitAnvil = () => {
           reason: 'Slippage can be at most 10%',
           disabledType: 'warning',
         } as SubmitError;
-      } else {
-        return getErrorFromSim(input.amount, decimals, loading, simResponse, undefined);
       }
+      const errorProps = getErrorFromSim(input.amount, decimals, loading, simResponse, undefined);
+      if (!errorProps.isError && !(simResponse && rpc.Api.isSimulationSuccess(simResponse))) {
+        errorProps.isSubmitDisabled = true;
+        errorProps.isError = true;
+        errorProps.reason = 'Unable to estimate this transaction.';
+        errorProps.disabledType = 'warning';
+      }
+      return errorProps;
     }, [input, loadingEstimate, simResponse, lpBalance]);
 
   if (backstop === undefined) {
@@ -173,6 +185,8 @@ export const BackstopExitAnvil = () => {
   };
 
   async function handleInputChange({ amount, slippage }: { amount: string; slippage: string }) {
+    const request = ++latestRequest.current;
+    const isLatest = () => request === latestRequest.current;
     setLoadingEstimate(true);
     clearInputResultState();
     const validDecimals = (amount.split('.')[1]?.length ?? 0) <= decimals;
@@ -180,8 +194,6 @@ export const BackstopExitAnvil = () => {
       const inputAsBigInt = scaleInputToBigInt(amount, decimals);
       const slippageAsNum = Number(slippage) / 100;
       let { blnd, usdc } = estExitPool(backstop.backstopToken, inputAsBigInt, slippageAsNum);
-      setMinBLNDOut(blnd);
-      setMinUSDCOut(usdc);
       cometExit(
         backstop.config.backstopTkn,
         {
@@ -193,14 +205,22 @@ export const BackstopExitAnvil = () => {
         true
       )
         .then((sim: rpc.Api.SimulateTransactionResponse | undefined) => {
-          setSimResponse(sim);
+          if (isLatest()) {
+            setMinBLNDOut(blnd);
+            setMinUSDCOut(usdc);
+            setSimResponse(sim);
+          }
         })
         .catch((e) => {
           console.log('Failed to simulate exit transaction.');
           console.error(e);
-          setMinBLNDOut(0);
-          setMinUSDCOut(0);
+        })
+        .finally(() => {
+          if (isLatest()) {
+            setLoadingEstimate(false);
+          }
         });
+      return;
     }
     setLoadingEstimate(false);
   }

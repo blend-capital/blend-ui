@@ -3,7 +3,7 @@ import { LoopOutlined } from '@mui/icons-material';
 import { Box, Typography, useTheme } from '@mui/material';
 import { rpc, scValToBigInt, xdr } from '@stellar/stellar-sdk';
 import Image from 'next/image';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { ViewType, useSettings } from '../../contexts';
 import { TxStatus, TxType, useWallet } from '../../contexts/wallet';
 import { useBackstop, useHorizonAccount, useTokenBalance } from '../../hooks/api';
@@ -24,9 +24,9 @@ import { TxFeeSelector } from '../common/TxFeeSelector';
 import { TxOverview } from '../common/TxOverview';
 import { Value } from '../common/Value';
 import { ValueChange } from '../common/ValueChange';
-import { LATEST_VERSION, Version } from '../../utils/version';
+import { Version } from '../../utils/version';
 
-export const BackstopJoinAnvil = () => {
+export const BackstopJoinAnvil = ({ version }: { version: Version }) => {
   const theme = useTheme();
   const { viewType, network } = useSettings();
   const {
@@ -43,8 +43,8 @@ export const BackstopJoinAnvil = () => {
   const USDC_ID = USDC_ASSET.contractId(network.passphrase);
 
   // joins stay closed on the LP token affected by the Comet incident
-  const joinsEnabled = LATEST_VERSION === Version.V2_1;
-  const { data: backstop } = useBackstop(LATEST_VERSION);
+  const joinsEnabled = version === Version.V2_1;
+  const { data: backstop } = useBackstop(version);
   const { data: horizonAccount } = useHorizonAccount();
   const { data: blndBalanceRes } = useTokenBalance(BLND_ID, BLND_ASSET, horizonAccount);
   const { data: usdcBalanceRes } = useTokenBalance(USDC_ID, USDC_ASSET, horizonAccount);
@@ -68,6 +68,8 @@ export const BackstopJoinAnvil = () => {
 
   const [loadingEstimate, setLoadingEstimate] = useState<boolean>(false);
   const [simResponse, setSimResponse] = useState<rpc.Api.SimulateTransactionResponse>();
+  // only the latest estimate request may update the results
+  const latestRequest = useRef<number>(0);
   const loading = isLoading || loadingEstimate;
   const decimals = 7;
   const isJoin = currentToken.symbol === 'BLND-USDC LP';
@@ -81,10 +83,14 @@ export const BackstopJoinAnvil = () => {
   };
 
   const handleSetInputAmount = (value: string) => {
+    clearInputResultState();
+    setLoadingEstimate(true);
     setInput({ amount: value, slippage: input.slippage });
   };
 
   const handleSetInputMaxSlippage = (value: string) => {
+    clearInputResultState();
+    setLoadingEstimate(true);
     setInput({ amount: input.amount, slippage: value });
   };
 
@@ -181,9 +187,15 @@ export const BackstopJoinAnvil = () => {
       }
       if (errorProps.isError) {
         return errorProps;
-      } else {
-        return getErrorFromSim(input.amount, decimals, loading, simResponse);
       }
+      errorProps = getErrorFromSim(input.amount, decimals, loading, simResponse);
+      if (!errorProps.isError && !(simResponse && rpc.Api.isSimulationSuccess(simResponse))) {
+        errorProps.isSubmitDisabled = true;
+        errorProps.isError = true;
+        errorProps.reason = 'Unable to estimate this transaction.';
+        errorProps.disabledType = 'warning';
+      }
+      return errorProps;
     }, [
       input,
       currentToken.symbol,
@@ -230,6 +242,8 @@ export const BackstopJoinAnvil = () => {
   };
 
   async function handleInputChange({ amount, slippage }: { amount: string; slippage: string }) {
+    const request = ++latestRequest.current;
+    const isLatest = () => request === latestRequest.current;
     setLoadingEstimate(true);
     clearInputResultState();
     const validDecimals = (amount.split('.')[1]?.length ?? 0) <= decimals;
@@ -253,7 +267,7 @@ export const BackstopJoinAnvil = () => {
           true
         )
           .then((sim: rpc.Api.SimulateTransactionResponse | undefined) => {
-            if (sim === undefined) {
+            if (!isLatest() || sim === undefined) {
               return;
             }
             setSimResponse(sim);
@@ -269,7 +283,13 @@ export const BackstopJoinAnvil = () => {
           .catch((e) => {
             console.log('Failed to simulate single sided deposit transaction.');
             console.error(e);
+          })
+          .finally(() => {
+            if (isLatest()) {
+              setLoadingEstimate(false);
+            }
           });
+        return;
       } else if (isJoin && validDecimals) {
         let { blnd, usdc } = estJoinPool(backstop.backstopToken, inputAsBigInt, slippageAsNum);
         setMaxBLNDIn(blnd);
@@ -286,12 +306,20 @@ export const BackstopJoinAnvil = () => {
             true
           )
             .then((sim: rpc.Api.SimulateTransactionResponse | undefined) => {
-              setSimResponse(sim);
+              if (isLatest()) {
+                setSimResponse(sim);
+              }
             })
             .catch((e) => {
               console.log('Failed to simulate join transaction.');
               console.error(e);
+            })
+            .finally(() => {
+              if (isLatest()) {
+                setLoadingEstimate(false);
+              }
             });
+          return;
         }
       }
     }
@@ -528,7 +556,7 @@ export const BackstopJoinAnvil = () => {
           <AnvilAlert
             severity={'warning'}
             message={
-              'Depositing into the BLND-USDC LP is currently disabled due to an issue in the underlying protocol Comet.'
+              'Depositing into the V1-2 BLND-USDC LP is disabled due to an issue in the underlying protocol Comet. Switch to V2.1 to join the new LP.'
             }
             extraContent={undefined}
           />

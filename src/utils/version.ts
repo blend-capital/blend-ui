@@ -43,3 +43,31 @@ export const V2_1_CLAIM_NOTICE = 'Claimable once BLND is added to the V2.1 backs
 export function isV2Contracts(version: Version | undefined): boolean {
   return version === Version.V2 || version === Version.V2_1;
 }
+
+/**
+ * The deployment used to manage the legacy BLND-USDC LP token shared by V1 and V2, if any.
+ */
+export const LEGACY_LP_VERSION: Version | undefined = ENABLED_VERSIONS.find(
+  (version) => version !== Version.V2_1
+);
+
+/**
+ * The deployments with a distinct BLND-USDC LP token, oldest first.
+ */
+export const LP_VERSIONS: Version[] = ENABLED_VERSIONS.filter(
+  (version) => version === Version.V2_1 || version === LEGACY_LP_VERSION
+);
+
+/**
+ * Map a deployment to the deployment used to manage its BLND-USDC LP token.
+ */
+export function toLPVersion(version: Version): Version {
+  return version === Version.V2_1 ? version : LEGACY_LP_VERSION ?? version;
+}
+
+/**
+ * The display name of a deployment's BLND-USDC LP token.
+ */
+export function lpVersionName(version: Version): string {
+  return version === Version.V2_1 ? Version.V2_1 : 'V1-2';
+}
