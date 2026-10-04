@@ -138,6 +138,7 @@ const Supply: NextPage = () => {
             text={
               reserve ? (
                 <RateDisplay
+                  version={poolMeta?.version}
                   assetSymbol={symbol}
                   assetRate={reserve.estSupplyApy}
                   emissionSymbol={'BLND'}

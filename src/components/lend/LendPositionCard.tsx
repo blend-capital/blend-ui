@@ -111,6 +111,7 @@ export const LendPositionCard: React.FC<LendPositionCardProps> = ({
         }}
       >
         <RateDisplay
+          version={poolMeta?.version}
           assetSymbol={symbol}
           assetRate={reserve.estSupplyApy}
           emissionSymbol="BLND"

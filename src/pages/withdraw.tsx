@@ -168,6 +168,7 @@ const Withdraw: NextPage = () => {
             text={
               reserve ? (
                 <RateDisplay
+                  version={poolMeta?.version}
                   assetSymbol={tokenSymbol}
                   assetRate={reserve.estSupplyApy}
                   emissionSymbol={'BLND'}

@@ -1,5 +1,6 @@
 import { Box, Tooltip, Typography, useTheme } from '@mui/material';
 import * as formatter from '../../utils/formatter';
+import { Version } from '../../utils/version';
 import { Icon } from './Icon';
 
 interface RateDisplayParams {
@@ -9,6 +10,7 @@ interface RateDisplayParams {
   emissionApr: number | undefined;
   rateType: 'earned' | 'charged';
   direction: 'vertical' | 'horizontal';
+  version: Version | undefined;
 }
 
 export const RateDisplay = ({
@@ -18,11 +20,14 @@ export const RateDisplay = ({
   emissionApr,
   rateType,
   direction,
+  version,
 }: RateDisplayParams) => {
   const theme = useTheme();
 
-  const net =
-    rateType === 'earned' ? (emissionApr ?? 0) + assetRate : assetRate - (emissionApr ?? 0);
+  // V2.1 emissions are not shown until they can be claimed
+  const showEmissions = version !== Version.V2_1 && emissionApr !== undefined && emissionApr > 0;
+  const emissionRate = showEmissions ? emissionApr : 0;
+  const net = rateType === 'earned' ? assetRate + emissionRate : assetRate - emissionRate;
   return (
     <Tooltip
       title={
@@ -30,7 +35,7 @@ export const RateDisplay = ({
           <Typography variant="body2">
             {`${assetSymbol} interest ${rateType} ${`${formatter.toPercentage(assetRate)}`}`}
           </Typography>
-          {emissionApr && (
+          {showEmissions && (
             <Typography variant="body2">{`${emissionSymbol} emissions earned ${formatter.toPercentage(
               emissionApr
             )}`}</Typography>
@@ -57,7 +62,7 @@ export const RateDisplay = ({
       >
         <Typography variant="body1">{formatter.toPercentage(assetRate)}</Typography>
 
-        {emissionApr !== undefined && emissionApr > 0 && (
+        {showEmissions && (
           <Box
             sx={{
               display: 'flex',

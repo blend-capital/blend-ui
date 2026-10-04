@@ -44,6 +44,7 @@ export const BackstopAPR: React.FC<PoolComponentProps> = ({ poolId }) => {
       text={
         estBackstopApr !== undefined ? (
           <RateDisplay
+            version={poolMeta?.version}
             assetSymbol={'BLND-USDC LP'}
             assetRate={estBackstopApr}
             emissionSymbol={'BLND-USDC LP'}

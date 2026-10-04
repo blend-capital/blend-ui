@@ -105,6 +105,7 @@ const Repay: NextPage = () => {
             text={
               reserve ? (
                 <RateDisplay
+                  version={poolMeta?.version}
                   assetSymbol={symbol}
                   assetRate={reserve.estBorrowApy}
                   emissionSymbol={'BLND'}
