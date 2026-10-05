@@ -52,7 +52,7 @@ import { BACKSTOP_IDS, isV2Contracts, Version } from '../utils/version';
 
 const DEFAULT_STALE_TIME = 30 * 1000;
 const USER_STALE_TIME = 60 * 1000;
-const ORACLE_PRICE_FETCHER = process.env.NEXT_PUBLIC_ORACLE_PRICE_FETCHER;
+const ORACLE_PRICE_FETCHER = process.env.NEXT_PUBLIC_ORACLE_PRICE_FETCHER || undefined;
 
 //********** Query Client Data **********//
 

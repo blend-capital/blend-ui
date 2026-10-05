@@ -1,20 +1,18 @@
 import { Box, IconButton } from '@mui/material';
 import Image from 'next/image';
 import { ViewType, useSettings } from '../../contexts';
-import { useBackstop } from '../../hooks/api';
+import { useDefaultPoolId } from '../../hooks/defaultPool';
 import { Row } from '../common/Row';
 import { Section, SectionSize } from '../common/Section';
 import { SectionBase } from '../common/SectionBase';
 import { NavItem } from './NavItem';
 import { NavMenu } from './NavMenu';
 import { WalletMenu } from './WalletMenu';
-import { Version } from '../../utils/version';
 
 export const NavBar = () => {
-  const { viewType, lastPool } = useSettings();
+  const { viewType } = useSettings();
 
-  const { data: backstop } = useBackstop(Version.V1, lastPool == undefined);
-  const poolId = (lastPool ? lastPool.id : backstop?.config?.rewardZone[0]) ?? '';
+  const poolId = useDefaultPoolId() ?? '';
 
   return (
     <Row sx={{ height: '62px' }}>

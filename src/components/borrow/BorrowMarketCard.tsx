@@ -107,6 +107,7 @@ export const BorrowMarketCard: React.FC<BorrowMarketCardProps> = ({
             }}
           >
             <RateDisplay
+              version={poolMeta?.version}
               assetSymbol={symbol}
               assetRate={reserve.estBorrowApy}
               emissionSymbol="BLND"

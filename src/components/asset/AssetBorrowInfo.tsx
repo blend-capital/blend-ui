@@ -80,6 +80,7 @@ export const AssetBorrowInfo: React.FC<ReserveComponentProps> = ({ poolId, asset
         >
           <Typography sx={{ padding: '6px' }}>APY</Typography>
           <RateDisplay
+            version={poolMeta?.version}
             assetSymbol={tokenSymbol}
             assetRate={reserve.estBorrowApy}
             emissionSymbol={'BLND'}

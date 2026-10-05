@@ -15,7 +15,6 @@ import { TooltipText } from '../components/common/TooltipText';
 import { PositionOverview } from '../components/dashboard/PositionOverview';
 import { LendMarketList } from '../components/lend/LendMarketList';
 import { LendPositionList } from '../components/lend/LendPositionList';
-import { EmissionsCreditBanner } from '../components/pool/EmissionsCreditBanner';
 import { NotPoolBar } from '../components/pool/NotPoolBar';
 import { PoolExploreBar } from '../components/pool/PoolExploreBar';
 import { PoolHealthBanner } from '../components/pool/PoolHealthBanner';
@@ -24,7 +23,6 @@ import { usePool, usePoolMeta, usePoolOracle, usePoolUser } from '../hooks/api';
 import { NOT_BLEND_POOL_ERROR_MESSAGE } from '../hooks/types';
 import { toBalance } from '../utils/formatter';
 import { MAINNET_USDC_CONTRACT_ADDRESS } from '../utils/token_display';
-import { Version } from '../utils/version';
 
 const Dashboard: NextPage = () => {
   const router = useRouter();
@@ -77,7 +75,6 @@ const Dashboard: NextPage = () => {
     <>
       <PoolHealthBanner poolId={safePoolId} />
       <PoolExploreBar poolId={safePoolId} />
-      {poolMeta?.version === Version.V2_1 && <EmissionsCreditBanner />}
       {pool &&
         Array.from(pool.reserves.keys()).some(
           (assetId) => assetId === MAINNET_USDC_CONTRACT_ADDRESS

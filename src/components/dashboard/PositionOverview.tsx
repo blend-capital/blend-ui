@@ -21,7 +21,7 @@ import {
 import { toBalance, toPercentage } from '../../utils/formatter';
 import { requiresTrustline } from '../../utils/horizon';
 import { BLND_ASSET } from '../../utils/token_display';
-import { V2_1_CLAIM_NOTICE, Version } from '../../utils/version';
+import { Version } from '../../utils/version';
 import { CustomButton } from '../common/CustomButton';
 import { FlameIcon } from '../common/FlameIcon';
 import { Icon } from '../common/Icon';
@@ -69,11 +69,6 @@ export const PositionOverview: React.FC<PoolComponentProps> = ({ poolId }) => {
     isLoading === false && simResult !== undefined && rpc.Api.isSimulationRestore(simResult);
   const isError =
     isLoading === false && simResult !== undefined && rpc.Api.isSimulationError(simResult);
-  // V2.1 emissions stay credit until the backstop holds the BLND to pay the claim
-  const isCreditOnly =
-    poolMeta?.version === Version.V2_1 &&
-    emissions > 0 &&
-    !(simResult !== undefined && rpc.Api.isSimulationSuccess(simResult));
 
   const userEst = poolOracle
     ? PositionsEstimate.build(pool, poolOracle, userPoolData.positions)
@@ -107,7 +102,7 @@ export const PositionOverview: React.FC<PoolComponentProps> = ({ poolId }) => {
   };
 
   function renderClaimButton() {
-    if (hasBLNDTrustline && !isRestore && !isError && !isCreditOnly) {
+    if (hasBLNDTrustline && !isRestore && !isError && poolMeta?.version !== Version.V2_1) {
       return (
         <CustomButton
           sx={{
@@ -145,9 +140,9 @@ export const PositionOverview: React.FC<PoolComponentProps> = ({ poolId }) => {
       } else if (!hasBLNDTrustline) {
         buttonText = 'Add BLND Trustline';
         onClick = handleCreateTrustlineClick;
-      } else if (isCreditOnly) {
-        buttonText = `${toBalance(emissions)} BLND accrued`;
-        buttonTooltip = V2_1_CLAIM_NOTICE;
+      } else if (poolMeta?.version === Version.V2_1) {
+        buttonText = 'V2.1 Claim Disabled';
+        buttonTooltip = 'Claiming is disabled until V2.1 emissions are enabled';
         disabled = true;
       } else if (isError) {
         const claimError = parseError(simResult);

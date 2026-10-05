@@ -119,6 +119,7 @@ const Borrow: NextPage = () => {
             text={
               reserve ? (
                 <RateDisplay
+                  version={poolMeta?.version}
                   assetSymbol={tokenSymbol}
                   assetRate={reserve.estBorrowApy}
                   emissionSymbol={'BLND'}

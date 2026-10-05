@@ -1,6 +1,7 @@
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { IconButton, Typography, useTheme } from '@mui/material';
 import type { NextPage } from 'next';
+import { useEffect, useState } from 'react';
 import { BackstopExitAnvil } from '../components/backstop/BackstopExitAnvil';
 import { BackstopJoinAnvil } from '../components/backstop/BackstopJoinAnvil';
 import { Divider } from '../components/common/Divider';
@@ -10,21 +11,41 @@ import { Row } from '../components/common/Row';
 import { Section, SectionSize } from '../components/common/Section';
 import { StackedText } from '../components/common/StackedText';
 import { ToggleButton } from '../components/common/ToggleButton';
+import { ToggleSlider } from '../components/common/ToggleSlider';
 import { VersionTag } from '../components/common/VersionTag';
 import { ViewType, useSettings } from '../contexts';
 import { useBackstop, useHorizonAccount, useTokenBalance } from '../hooks/api';
 import { toBalance } from '../utils/formatter';
 import { BLND_ASSET, USDC_ASSET } from '../utils/token_display';
-import { LATEST_VERSION } from '../utils/version';
+import {
+  ENABLED_VERSIONS,
+  LATEST_VERSION,
+  LP_VERSIONS,
+  Version,
+  lpVersionName,
+  toLPVersion,
+} from '../utils/version';
 
 const BackstopToken: NextPage = () => {
   const theme = useTheme();
-  const { showJoinPool, setShowJoinPool, viewType, network } = useSettings();
+  const { showJoinPool, setShowJoinPool, viewType, network, lastPool } = useSettings();
+
+  // V1 and V2 share a BLND-USDC LP token, and V2.1 has its own. Default to the LP of the
+  // last viewed pool, then the latest deployment.
+  const [version, setVersion] = useState<Version | undefined>(undefined);
+
+  useEffect(() => {
+    if (lastPool?.version && ENABLED_VERSIONS.includes(lastPool.version)) {
+      setVersion(toLPVersion(lastPool.version));
+    } else {
+      setVersion(toLPVersion(LATEST_VERSION));
+    }
+  }, [lastPool]);
 
   const BLND_CONTRACT_ID = BLND_ASSET.contractId(network.passphrase);
   const USDC_CONTRACT_ID = USDC_ASSET.contractId(network.passphrase);
 
-  const { data: backstop } = useBackstop(LATEST_VERSION);
+  const { data: backstop } = useBackstop(version);
   const { data: horizonAccount } = useHorizonAccount();
   const { data: blndBalanceRes } = useTokenBalance(BLND_CONTRACT_ID, BLND_ASSET, horizonAccount);
   const { data: usdcBalanceRes } = useTokenBalance(USDC_CONTRACT_ID, USDC_ASSET, horizonAccount);
@@ -65,7 +86,26 @@ const BackstopToken: NextPage = () => {
           sx={{ marginRight: '12px' }}
         />
         <Typography variant="h2">{title}</Typography>
-        <VersionTag version={LATEST_VERSION} sx={{ marginLeft: '6px' }} />
+        {version !== undefined && LP_VERSIONS.length > 1 && (
+          <ToggleSlider
+            options={LP_VERSIONS.map((option) => ({
+              optionName: option,
+              palette: option === Version.V2_1 ? theme.palette.backstop : theme.palette.primary,
+            }))}
+            text={LP_VERSIONS.map(lpVersionName)}
+            selected={version}
+            changeState={setVersion}
+            sx={{
+              height: '24px',
+              width: `${60 * LP_VERSIONS.length}px`,
+              marginLeft: '6px',
+              whiteSpace: 'nowrap',
+            }}
+          />
+        )}
+        {version !== undefined && LP_VERSIONS.length <= 1 && (
+          <VersionTag version={version} sx={{ marginLeft: '6px' }} />
+        )}
         <IconButton
           onClick={() =>
             window.open(
@@ -176,7 +216,12 @@ const BackstopToken: NextPage = () => {
         </Section>
       </Row>
 
-      {showJoinPool ? <BackstopJoinAnvil /> : <BackstopExitAnvil />}
+      {version !== undefined &&
+        (showJoinPool ? (
+          <BackstopJoinAnvil key={version} version={version} />
+        ) : (
+          <BackstopExitAnvil key={version} version={version} />
+        ))}
     </>
   );
 };

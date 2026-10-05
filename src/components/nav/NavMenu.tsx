@@ -4,16 +4,14 @@ import { Alert, IconButton, Menu, MenuItem, Snackbar, Typography, useTheme } fro
 import Link from 'next/link';
 import React from 'react';
 import { useSettings, ViewType } from '../../contexts';
-import { useBackstop } from '../../hooks/api';
+import { useDefaultPoolId } from '../../hooks/defaultPool';
 import { NavItem } from './NavItem';
-import { Version } from '../../utils/version';
 
 export const NavMenu = () => {
   const theme = useTheme();
-  const { viewType, lastPool } = useSettings();
+  const { viewType } = useSettings();
 
-  const { data: backstop } = useBackstop(Version.V1, lastPool == undefined);
-  const poolId = (lastPool ? lastPool.id : backstop?.config?.rewardZone[0]) ?? '';
+  const poolId = useDefaultPoolId() ?? '';
   const safePoolId = typeof poolId == 'string' && /^[0-9A-Z]{56}$/.test(poolId) ? poolId : '';
 
   const [openCon, setOpenCon] = React.useState(false);
