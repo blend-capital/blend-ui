@@ -153,6 +153,7 @@ async function initializeWalletKit(): Promise<WalletKit> {
     { HotWalletModule },
     { LedgerModule },
     { LobstrModule },
+    { MetaMaskModule },
     { WalletConnectModule, WalletConnectTargetChain },
     { XBULL_ID, xBullModule },
   ] = await Promise.all([
@@ -163,6 +164,7 @@ async function initializeWalletKit(): Promise<WalletKit> {
     import('@creit.tech/stellar-wallets-kit/modules/hotwallet'),
     import('@creit.tech/stellar-wallets-kit/modules/ledger'),
     import('@creit.tech/stellar-wallets-kit/modules/lobstr'),
+    import('@creit.tech/stellar-wallets-kit/modules/metamask'),
     import('@creit.tech/stellar-wallets-kit/modules/wallet-connect'),
     import('@creit.tech/stellar-wallets-kit/modules/xbull'),
   ]);
@@ -199,6 +201,7 @@ async function initializeWalletKit(): Promise<WalletKit> {
         new LedgerModule(),
         walletConnectModule,
         new HotWalletModule(),
+        new MetaMaskModule(),
       ],
     });
   }
