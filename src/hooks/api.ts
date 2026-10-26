@@ -200,17 +200,18 @@ export function usePool(
     queryKey: ['pool', poolMeta?.id],
     enabled: enabled && poolMeta !== undefined,
     queryFn: async () => {
-      if (poolMeta !== undefined) {
-        try {
-          if (isV2Contracts(poolMeta.version)) {
-            return await PoolV2.loadWithMetadata(network, poolMeta.id, poolMeta);
-          } else {
-            return await PoolV1.loadWithMetadata(network, poolMeta.id, poolMeta);
-          }
-        } catch (e: any) {
-          console.error('Error fetching pool data', e);
-          throw e;
+      if (poolMeta === undefined) {
+        throw new Error('No pool metadata');
+      }
+      try {
+        if (isV2Contracts(poolMeta.version)) {
+          return await PoolV2.loadWithMetadata(network, poolMeta.id, poolMeta);
+        } else {
+          return await PoolV1.loadWithMetadata(network, poolMeta.id, poolMeta);
         }
+      } catch (e: any) {
+        console.error('Error fetching pool data', e);
+        throw e;
       }
     },
   });
@@ -232,31 +233,29 @@ export function usePoolOracle(
     queryKey: ['poolOracle', pool?.id],
     enabled: pool !== undefined && enabled,
     queryFn: async () => {
-      if (pool !== undefined) {
-        if (ORACLE_PRICE_FETCHER !== undefined) {
-          try {
-            const { decimals, latestLedger } = await getOracleDecimals(
-              network,
-              pool.metadata.oracle
-            );
-            const prices = await getOraclePrices(
-              network,
-              ORACLE_PRICE_FETCHER,
-              pool.metadata.oracle,
-              pool.metadata.reserveList
-            );
-            if (prices.size < pool.metadata.reserveList.length) {
-              throw new Error('Invalid number of prices returned from oracle');
-            }
-            return new PoolOracle(pool.metadata.oracle, prices, decimals, latestLedger);
-          } catch (e: any) {
-            console.error('Price fetcher call failed: ', e);
-            // if the oracle fetcher fails, fallback to default loading method
-            return await pool.loadOracle();
+      if (pool === undefined) {
+        throw new Error('No pool');
+      }
+      if (ORACLE_PRICE_FETCHER !== undefined) {
+        try {
+          const { decimals, latestLedger } = await getOracleDecimals(network, pool.metadata.oracle);
+          const prices = await getOraclePrices(
+            network,
+            ORACLE_PRICE_FETCHER,
+            pool.metadata.oracle,
+            pool.metadata.reserveList
+          );
+          if (prices.size < pool.metadata.reserveList.length) {
+            throw new Error('Invalid number of prices returned from oracle');
           }
-        } else {
+          return new PoolOracle(pool.metadata.oracle, prices, decimals, latestLedger);
+        } catch (e: any) {
+          console.error('Price fetcher call failed: ', e);
+          // if the oracle fetcher fails, fallback to default loading method
           return await pool.loadOracle();
         }
+      } else {
+        return await pool.loadOracle();
       }
     },
     retry: 1,
@@ -285,9 +284,10 @@ export function usePoolUser(
       new Map()
     ),
     queryFn: async () => {
-      if (pool !== undefined && walletAddress !== '') {
-        return await pool.loadUser(walletAddress);
+      if (pool === undefined || walletAddress === '') {
+        throw new Error('No pool or wallet address');
       }
+      return await pool.loadUser(walletAddress);
     },
   });
 }
@@ -330,11 +330,12 @@ export function useBackstopPool(
     queryKey: ['backstopPool', poolMeta?.id],
     enabled: enabled && poolMeta !== undefined,
     queryFn: async () => {
-      if (poolMeta !== undefined) {
-        return isV2Contracts(poolMeta.version)
-          ? await BackstopPoolV2.load(network, BACKSTOP_IDS[poolMeta.version], poolMeta.id)
-          : await BackstopPoolV1.load(network, BACKSTOP_IDS[Version.V1], poolMeta.id);
+      if (poolMeta === undefined) {
+        throw new Error('No pool metadata');
       }
+      return isV2Contracts(poolMeta.version)
+        ? await BackstopPoolV2.load(network, BACKSTOP_IDS[poolMeta.version], poolMeta.id)
+        : await BackstopPoolV1.load(network, BACKSTOP_IDS[Version.V1], poolMeta.id);
     },
   });
 }
@@ -362,14 +363,15 @@ export function useBackstopPoolUser(
       undefined
     ),
     queryFn: async () => {
-      if (walletAddress !== '' && poolMeta !== undefined) {
-        return await BackstopPoolUser.load(
-          network,
-          BACKSTOP_IDS[poolMeta.version],
-          poolMeta.id,
-          walletAddress
-        );
+      if (walletAddress === '' || poolMeta === undefined) {
+        throw new Error('No wallet address or pool metadata');
       }
+      return await BackstopPoolUser.load(
+        network,
+        BACKSTOP_IDS[poolMeta.version],
+        poolMeta.id,
+        walletAddress
+      );
     },
   });
 }
@@ -473,6 +475,7 @@ export function useAuctionEventsLongQuery(
   return useQuery({
     staleTime: 10 * 60 * 1000,
     queryKey: ['auctionEventsLong', poolMeta?.id],
+    retry: 0,
     enabled: enabled && poolMeta !== undefined,
     placeholderData: keepPreviousData,
     queryFn: async () => {
@@ -488,10 +491,10 @@ export function useAuctionEventsLongQuery(
         let queryLedger = Math.round(latestLedger - 9990);
         queryLedger = Math.max(queryLedger, 100);
 
-        return getAuctionEventsQuery(poolMeta, network, queryLedger);
+        return await getAuctionEventsQuery(poolMeta, network, queryLedger);
       } catch (e) {
         console.error('Error fetching auction events', e);
-        return undefined;
+        throw e;
       }
     },
   });
@@ -521,10 +524,10 @@ export function useAuctionEventsShortQuery(
         throw new Error();
       }
       try {
-        return getAuctionEventsQuery(poolMeta, network, lastLedgerFetched);
+        return await getAuctionEventsQuery(poolMeta, network, lastLedgerFetched);
       } catch (e) {
         console.error('Error fetching auction events', e);
-        return undefined;
+        throw e;
       }
     },
   });
@@ -550,7 +553,7 @@ export function useSimulateOperation<T>(
       if (walletAddress === '') {
         throw new Error('No wallet address');
       }
-      let operation = xdr.Operation.fromXDR(operation_str, 'base64');
+      let operation = xdr.Operation.fromXdr(operation_str, 'base64');
       const stellarRpc = new rpc.Server(network.rpc, network.opts);
       const account = new Account(walletAddress, '123');
       const tx_builder = new TransactionBuilder(account, {
@@ -669,16 +672,16 @@ function createTokenMetadataQuery(
 }
 
 const AUCTION_EVENT_FILTERS = [
-  [xdr.ScVal.scvSymbol('fill_auction').toXDR('base64'), '*', '*'],
-  [xdr.ScVal.scvSymbol('delete_liquidation_auction').toXDR('base64'), '*'],
-  [xdr.ScVal.scvSymbol('new_liquidation_auction').toXDR('base64'), '*'],
-  [xdr.ScVal.scvSymbol('new_auction').toXDR('base64'), '*'],
-  [xdr.ScVal.scvSymbol('delete_liquidation_auction').toXDR('base64'), '*'],
+  [xdr.ScVal.scvSymbol('fill_auction').toXdr('base64'), '*', '*'],
+  [xdr.ScVal.scvSymbol('delete_liquidation_auction').toXdr('base64'), '*'],
+  [xdr.ScVal.scvSymbol('new_liquidation_auction').toXdr('base64'), '*'],
+  [xdr.ScVal.scvSymbol('new_auction').toXdr('base64'), '*'],
+  [xdr.ScVal.scvSymbol('delete_liquidation_auction').toXdr('base64'), '*'],
 ];
 const AUCTION_EVENT_FILTERS_V2 = [
-  [xdr.ScVal.scvSymbol('new_auction').toXDR('base64'), '*', '*'],
-  [xdr.ScVal.scvSymbol('fill_auction').toXDR('base64'), '*', '*'],
-  [xdr.ScVal.scvSymbol('delete_auction').toXDR('base64'), '*', '*'],
+  [xdr.ScVal.scvSymbol('new_auction').toXdr('base64'), '*', '*'],
+  [xdr.ScVal.scvSymbol('fill_auction').toXdr('base64'), '*', '*'],
+  [xdr.ScVal.scvSymbol('delete_auction').toXdr('base64'), '*', '*'],
 ];
 
 /**

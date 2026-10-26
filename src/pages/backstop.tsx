@@ -137,7 +137,7 @@ const Backstop: NextPage = () => {
             minLPTokenAmount: BigInt(0),
             user: backstop.id,
           })
-          .toXDR('base64')
+          .toXdr('base64')
       : undefined;
 
   const { data: mintSimResult, refetch: refetchMintSim } = useSimulateOperation(
@@ -148,7 +148,7 @@ const Backstop: NextPage = () => {
   if (mintSimResult && rpc.Api.isSimulationSuccess(mintSimResult)) {
     lpTokenEmissions =
       parseResult(mintSimResult, (xdrString: string) => {
-        return scValToBigInt(xdr.ScVal.fromXDR(xdrString, 'base64'));
+        return scValToBigInt(xdr.ScVal.fromXdr(xdrString, 'base64'));
       }) ?? BigInt(0);
   }
 
