@@ -22,6 +22,10 @@ declare module '@creit.tech/stellar-wallets-kit/modules/lobstr' {
   export * from '@creit.tech/stellar-wallets-kit/esm/sdk/modules/lobstr.module.js';
 }
 
+declare module '@creit.tech/stellar-wallets-kit/modules/metamask' {
+  export * from '@creit.tech/stellar-wallets-kit/esm/sdk/modules/metamask.module.js';
+}
+
 declare module '@creit.tech/stellar-wallets-kit/modules/wallet-connect' {
   export * from '@creit.tech/stellar-wallets-kit/esm/sdk/modules/wallet-connect.module.js';
 }

@@ -153,6 +153,7 @@ async function initializeWalletKit(): Promise<WalletKit> {
     { HotWalletModule },
     { LedgerModule },
     { LobstrModule },
+    { MetaMaskModule },
     { WalletConnectModule, WalletConnectTargetChain },
     { XBULL_ID, xBullModule },
   ] = await Promise.all([
@@ -163,6 +164,7 @@ async function initializeWalletKit(): Promise<WalletKit> {
     import('@creit.tech/stellar-wallets-kit/modules/hotwallet'),
     import('@creit.tech/stellar-wallets-kit/modules/ledger'),
     import('@creit.tech/stellar-wallets-kit/modules/lobstr'),
+    import('@creit.tech/stellar-wallets-kit/modules/metamask'),
     import('@creit.tech/stellar-wallets-kit/modules/wallet-connect'),
     import('@creit.tech/stellar-wallets-kit/modules/xbull'),
   ]);
@@ -199,6 +201,7 @@ async function initializeWalletKit(): Promise<WalletKit> {
         new LedgerModule(),
         walletConnectModule,
         new HotWalletModule(),
+        new MetaMaskModule(),
       ],
     });
   }
@@ -407,7 +410,7 @@ export const WalletProvider: React.FC<React.PropsWithChildren> = ({ children }) 
       .setSorobanData(sim.restorePreamble.transactionData.build())
       .addOperation(Operation.restoreFootprint({}))
       .build();
-    let signed_restore_tx = new Transaction(await sign(restore_tx.toXDR()), network.passphrase);
+    let signed_restore_tx = new Transaction(await sign(restore_tx.toXdr()), network.passphrase);
     setTxType(TxType.PREREQ);
     await sendTransaction(signed_restore_tx);
   }
@@ -445,7 +448,7 @@ export const WalletProvider: React.FC<React.PropsWithChildren> = ({ children }) 
       return false;
     }
 
-    let hash = transaction.hash().toString('hex');
+    let hash = new xdr.Hash(transaction.hash()).toString();
     setTxHash(hash);
     if (get_tx_response.status === 'SUCCESS') {
       console.log('Successfully submitted transaction: ', hash);
@@ -494,7 +497,7 @@ export const WalletProvider: React.FC<React.PropsWithChildren> = ({ children }) 
       const transaction = tx_builder.build();
       const simResponse = await simulateOperation(operation);
       const assembled_tx = rpc.assembleTransaction(transaction, simResponse).build();
-      const extended_tx = addReflectorEntries(assembled_tx.toXDR());
+      const extended_tx = addReflectorEntries(assembled_tx.toXdr());
       console.log('Sending transaction to wallet: ', extended_tx);
       const signedTx = await sign(extended_tx);
       const tx = new Transaction(signedTx, network.passphrase);
@@ -532,7 +535,7 @@ export const WalletProvider: React.FC<React.PropsWithChildren> = ({ children }) 
         poolMeta.version === Version.V2
           ? new PoolContractV2(poolMeta.id)
           : new PoolContractV2(poolMeta.id);
-      const operation = xdr.Operation.fromXDR(pool.submit(submitArgs), 'base64');
+      const operation = xdr.Operation.fromXdr(pool.submit(submitArgs), 'base64');
       if (sim) {
         return await simulateOperation(operation);
       }
@@ -559,7 +562,7 @@ export const WalletProvider: React.FC<React.PropsWithChildren> = ({ children }) 
         poolMeta.version === Version.V2
           ? new PoolContractV2(poolMeta.id)
           : new PoolContractV2(poolMeta.id);
-      const operation = xdr.Operation.fromXDR(pool.claim(claimArgs), 'base64');
+      const operation = xdr.Operation.fromXdr(pool.claim(claimArgs), 'base64');
       if (sim) {
         return await simulateOperation(operation);
       }
@@ -587,7 +590,7 @@ export const WalletProvider: React.FC<React.PropsWithChildren> = ({ children }) 
       const backstop = isV2Contracts(poolMeta.version)
         ? new BackstopContractV2(BACKSTOP_IDS[poolMeta.version])
         : new BackstopContractV1(BACKSTOP_IDS[Version.V1]);
-      const operation = xdr.Operation.fromXDR(backstop.deposit(args), 'base64');
+      const operation = xdr.Operation.fromXdr(backstop.deposit(args), 'base64');
       if (sim) {
         return await simulateOperation(operation);
       }
@@ -617,7 +620,7 @@ export const WalletProvider: React.FC<React.PropsWithChildren> = ({ children }) 
       const backstop = isV2Contracts(poolMeta.version)
         ? new BackstopContractV2(BACKSTOP_IDS[poolMeta.version])
         : new BackstopContractV1(BACKSTOP_IDS[Version.V1]);
-      const operation = xdr.Operation.fromXDR(backstop.withdraw(args), 'base64');
+      const operation = xdr.Operation.fromXdr(backstop.withdraw(args), 'base64');
       if (sim) {
         return await simulateOperation(operation);
       }
@@ -647,7 +650,7 @@ export const WalletProvider: React.FC<React.PropsWithChildren> = ({ children }) 
       const backstop = isV2Contracts(poolMeta.version)
         ? new BackstopContractV2(BACKSTOP_IDS[poolMeta.version])
         : new BackstopContractV1(BACKSTOP_IDS[Version.V1]);
-      const operation = xdr.Operation.fromXDR(backstop.queueWithdrawal(args), 'base64');
+      const operation = xdr.Operation.fromXdr(backstop.queueWithdrawal(args), 'base64');
       if (sim) {
         return await simulateOperation(operation);
       }
@@ -676,7 +679,7 @@ export const WalletProvider: React.FC<React.PropsWithChildren> = ({ children }) 
       const backstop = isV2Contracts(poolMeta.version)
         ? new BackstopContractV2(BACKSTOP_IDS[poolMeta.version])
         : new BackstopContractV1(BACKSTOP_IDS[Version.V1]);
-      const operation = xdr.Operation.fromXDR(backstop.dequeueWithdrawal(args), 'base64');
+      const operation = xdr.Operation.fromXdr(backstop.dequeueWithdrawal(args), 'base64');
       if (sim) {
         return await simulateOperation(operation);
       }
@@ -713,9 +716,9 @@ export const WalletProvider: React.FC<React.PropsWithChildren> = ({ children }) 
         );
       }
       if (sim) {
-        return await simulateOperation(xdr.Operation.fromXDR(operation, 'base64'));
+        return await simulateOperation(xdr.Operation.fromXdr(operation, 'base64'));
       }
-      await invokeSorobanOperation(xdr.Operation.fromXDR(operation, 'base64'));
+      await invokeSorobanOperation(xdr.Operation.fromXdr(operation, 'base64'));
       if (typeof claimArgs.pool_addresses[0] === 'string') {
         cleanBackstopPoolCache(claimArgs.pool_addresses[0]);
       } else {
@@ -808,11 +811,11 @@ export const WalletProvider: React.FC<React.PropsWithChildren> = ({ children }) 
         const resp = await fetch(url, { method: 'GET' });
         const txEnvelopeXDR = await resp.text();
         let transaction = new Transaction(
-          xdr.TransactionEnvelope.fromXDR(txEnvelopeXDR, 'base64'),
+          xdr.TransactionEnvelope.fromXdr(txEnvelopeXDR, 'base64'),
           network.passphrase
         );
 
-        let signedTx = new Transaction(await sign(transaction.toXDR()), network.passphrase);
+        let signedTx = new Transaction(await sign(transaction.toXdr()), network.passphrase);
         const result = await sendTransaction(signedTx);
         if (result) {
           cleanWalletCache();
@@ -842,7 +845,7 @@ export const WalletProvider: React.FC<React.PropsWithChildren> = ({ children }) 
           tx_builder.addOperation(trustlineOperation);
         }
         const transaction = tx_builder.build();
-        const signedTx = await sign(transaction.toXDR());
+        const signedTx = await sign(transaction.toXdr());
         const tx = new Transaction(signedTx, network.passphrase);
         setTxType(TxType.PREREQ);
         const result = await sendTransaction(tx);

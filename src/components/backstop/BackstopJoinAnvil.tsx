@@ -273,7 +273,7 @@ export const BackstopJoinAnvil = ({ version }: { version: Version }) => {
             setSimResponse(sim);
             if (rpc.Api.isSimulationSuccess(sim)) {
               let result = parseResult(sim, (xdrString: string) => {
-                return scValToBigInt(xdr.ScVal.fromXDR(xdrString, 'base64'));
+                return scValToBigInt(xdr.ScVal.fromXdr(xdrString, 'base64'));
               });
               let resultAsNumber = Number(result ?? 0) / 10 ** decimals;
               let toMintMin = resultAsNumber - resultAsNumber * slippageAsNum;
